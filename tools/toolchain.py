@@ -31,20 +31,15 @@ import datetime
 import time
 
 def usage(name):
-    print("Usage: %s [-h] [-1] [-f] [-s n|g|c] [-m] [-L] [-G] [-F] FILE.EXT ..." % name)
+    print("Usage: %s [-h] [-v VERB] [-1] [-m] [-L] [-G] [-F] FILE.EXT ..." % name)
     print("  -h       Print this message")
-    print("  -f       Force regeneration of all files")
-    print("  -s n|g|c Stop after NNF generation, CRAT generation (g) or proof check (c)")
+    print("  -v VERB  Set verbosity level.  Level 2 causes comments in .crat file")
     print("  -1       Generate one-sided proof (don't validate assertions)")
     print("  -m       Monolithic mode: Do validation with single call to SAT solver")
     print("  -L       Expand each node, rather than using lemmas")
     print("  -G       Prove each literal separately, rather than grouping into single proof")
     print("  -F       Run Lean checker to formally check")
     print("  EXT      Can be any extension for wild-card matching (e.g., cnf, nnf)")
-
-# Blocking file.  If present in directory, won't proceed.  Recheck every sleepTime seconds
-blockPath = "./block.txt"
-sleepTime = 60
 
 # Defaults
 standardTimeLimit = 60
@@ -59,7 +54,7 @@ useLean = False
 d4Program = "d4"
 
 genHome = "../src"
-genProgram = genHome + "/cratify"
+genProgram = genHome + "/crat-gen"
 
 checkHome = "../src"
 checkProgram = checkHome + "/crat-check"
@@ -69,7 +64,7 @@ leanCheckProgram = leanHome + "/ProofChecker/build/bin/checker"
 
 interpreter = "python3"
 countHome = "../tools"
-countProgram = countHome + "/count-crat.py"
+countProgram = countHome + "/crat-count.py"
 
 timeLimits = { "D4" : 4000, "GEN" : 10000, "FCHECK" : 1000, "LCHECK" : 4000, "COUNT" : 4000 }
 
@@ -77,13 +72,7 @@ clauseLimit = (1 << 31) - 1
 
 commentChar = 'c'
 
-def waitWhileBlocked():
-    first = True
-    while os.path.exists(blockPath):
-        if first:
-            print("Waiting to unblock")
-        first = False
-        time.sleep(sleepTime)
+verbLevel = 1
 
 def checkFile(prefix, fname, logFile):
     f = open(fname, 'r')
@@ -175,6 +164,8 @@ def runGen(root, home, logFile, force):
     if not force and os.path.exists(cratName):
         return True
     cmd = [genProgram]
+    if verbLevel != 1:
+        cmd += ['-v', str(verbLevel)]
     if oneSided:
         cmd += ['-1']
     if monolithic:
@@ -194,6 +185,8 @@ def runCheck(root, home, logFile):
     cnfName = home + "/" + root + ".cnf"
     cratName = home + "/" + root + ".crat"
     cmd = [checkProgram]
+    if verbLevel != 1:
+        cmd += ['-v', str(verbLevel)]
     if oneSided:
         cmd += ['-1']
     cmd += [cnfName, cratName]
@@ -216,8 +209,7 @@ def runCount(root, home, logFile):
     ok = runProgram("COUNT", root, cmd, logFile)
     return ok
 
-def runSequence(root, home, stopD4, stopGen, stopCheck, force):
-    waitWhileBlocked()
+def runSequence(root, home, force):
     result = ""
     prefix = "OVERALL"
     start = datetime.datetime.now()
@@ -232,10 +224,6 @@ def runSequence(root, home, stopD4, stopGen, stopCheck, force):
         extension = "split_" + extension
     if useLean:
         extension = "lean_" + extension
-    if stopD4:
-        extension = ".D4_" + extension
-    if stopGen:
-        extension = ".d2p_" + extension
     logName = root + "." + extension
     if not force and os.path.exists(logName):
             print("Already have file %s.  Skipping benchmark" % logName)
@@ -248,22 +236,12 @@ def runSequence(root, home, stopD4, stopGen, stopCheck, force):
     ok = False
     done = False
     ok = runD4(root, home, logFile, force)
-    if stopD4:
-        ok = ok and runPartialGen(root, home, logFile, force)
-        done = True
-    if not done:
-        ok = ok and runGen(root, home, logFile, force)
-    done = done or stopGen
+    ok = ok and runGen(root, home, logFile, force)
     if useLean:
-        if not done:
-            ok = ok and runLeanCheck(root, home, logFile)
-        done = done or stopCheck
+        ok = ok and runLeanCheck(root, home, logFile)
     else:
-        if not done:
-            ok = ok and runCheck(root, home, logFile)
-        done = done or stopCheck
-        if not done:
-            ok = ok and runCount(root, home, logFile)
+        ok = ok and runCheck(root, home, logFile)
+        ok = ok and runCount(root, home, logFile)
     delta = datetime.datetime.now() - start
     seconds = delta.seconds + 1e-6 * delta.microseconds
     result += "%s LOG: Elapsed time = %.3f seconds\n" % (prefix, seconds)
@@ -271,6 +249,7 @@ def runSequence(root, home, stopD4, stopGen, stopCheck, force):
     result += "%s OUTCOME: %s\n" % (prefix, outcome)
     print("%s. %s OUTCOME: %s" % (root, prefix, outcome))
     print("%s. %s Elapsed time: %.3f seconds" % (root, prefix, seconds))
+    print("%s. %s. Results written to %s" % (root, prefix, logName))
     logFile.write(result)
     logFile.close()
 
@@ -281,27 +260,24 @@ def stripSuffix(fname):
     return ".".join(fields)
 
 
-def runBatch(home, fileList, stopD4, stopGen, stopCheck, force):
+def runBatch(home, fileList, force):
     roots = [stripSuffix(f) for f in fileList]
     roots = [r for r in roots if r is not None]
     print("Running on roots %s" % roots)
     for r in roots:
-        runSequence(r, home, stopD4, stopGen, stopCheck, force)
+        runSequence(r, home, force)
 
 def run(name, args):
-    global useLemma, group, oneSided, monolithic, useLean
+    global verbLevel, useLemma, group, oneSided, monolithic, useLean
     home = "."
-    stopD4 = False
-    stopGen = False
-    stopCheck = False
-    force = False
-    optList, args = getopt.getopt(args, "hf1mLGFs:")
+    force = True
+    optList, args = getopt.getopt(args, "hv:1mLGFs:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
-        elif opt == '-f':
-            force = True
+        elif opt == '-v':
+            verbLevel = int(val)
         elif opt == '-1':
             oneSided = True
         elif opt == '-m':
@@ -312,22 +288,11 @@ def run(name, args):
             group = False
         elif opt == '-F':
             useLean = True
-        elif opt == '-s':
-            if val == 'n':
-                stopD4 = True
-            elif val == 'g':
-                stopGen = True
-            elif val == 'c':
-                stopCheck = True
-            else:
-                print("Unknown stopping condition '%s'" % val)
-                usage(name)
-                return
         else:
             print("Unknown option '%s'" % opt)
             usage(name)
             return
-    runBatch(home, args, stopD4, stopGen, stopCheck, force)
+    runBatch(home, args, force)
 
 if __name__ == "__main__":
     run(sys.argv[0], sys.argv[1:])

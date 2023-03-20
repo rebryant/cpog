@@ -5,7 +5,7 @@ OPT=-O2
 CFLAGS=-g $(OPT) -Wno-nullability-completeness
 CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11
 
-all: crat-check cratify
+all: crat-check crat-gen
 
 crat-check: crat-check.c
 	$(CC) $(CFLAGS) crat-check.c -o crat-check
@@ -28,8 +28,8 @@ writer.o: ilist.h report.h writer.hh writer.cpp
 pog.o: pog.hh clausal.hh counters.h pog.cpp
 	$(CXX) $(CPPFLAGS) -c pog.cpp
 
-cratify: cratify.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
-	$(CXX) $(CPPFLAGS) -o cratify cratify.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
+crat-gen: crat-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
+	$(CXX) $(CPPFLAGS) -o crat-gen crat-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
 
 .SUFFIXES: .c .cpp .o
 
@@ -41,6 +41,6 @@ cratify: cratify.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
 
 clean:
 	rm -f *.o *~
-	rm -f cratify crat-check
+	rm -f crat-gen crat-check
 
 
