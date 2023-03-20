@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# Lean packages
+lake-packages/
+build/

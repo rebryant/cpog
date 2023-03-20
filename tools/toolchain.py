@@ -59,8 +59,8 @@ genProgram = genHome + "/crat-gen"
 checkHome = "../src"
 checkProgram = checkHome + "/crat-check"
 
-leanHome =  "../lean4"
-leanCheckProgram = leanHome + "/ProofChecker/build/bin/checker"
+leanHome =  "../VerifiedChecker"
+leanCheckProgram = leanHome + "/build/bin/checker"
 
 interpreter = "python3"
 countHome = "../tools"
