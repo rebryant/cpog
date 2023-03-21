@@ -4,6 +4,13 @@ install:
 linstall:
 	cd VerifiedChecker ; make install
 
+test:
+	cd test ; make test
+
+ltest:
+	cd test ; make ltest
+
+
 run:
 	cd benchmarks ; make run
 

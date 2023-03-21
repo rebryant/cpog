@@ -2,10 +2,10 @@ INTERP = python3
 TCHAIN = ../tools/toolchain.py
 VLEVEL=2
 
-run:
+test:
 	$(INTERP) $(TCHAIN) -v $(VLEVEL) *.cnf
 
-lrun:
+ltest:
 	$(INTERP) $(TCHAIN) -F -v $(VLEVEL) *.cnf
  
 
