@@ -16,7 +16,7 @@ Running the toolchain using prototype (unverified) tools requires the following:
 * An installed version of the [Cadical SAT solver](https://github.com/arminbiere/cadical)
 * An installed version of the drat-trim [DRAT proof checker](https://github.com/marijnheule/drat-trim)
 
-Running the toolchain using formally verified tools requires the following:
+In addition, running the toolchain using formally verified tools requires the following:
 
 * An installed verions of the Lean [elan version manager](https://github.com/leanprover/elan)
 
@@ -36,17 +36,17 @@ Running the toolchain using formally verified tools requires the following:
 
 # Make Options
 
-* install:
-    Compiles the CRAT generator and prototype checker
-* linstall:
+* **install:**
+    Compiles the CRAT generator and prototype checker.
+* **linstall:**
     Compiles the Lean verifier
-* run:
+* **run:**
     Runs the generator, prototype checker, and prototype counter on 34 benchmark files
-* lrun:
+* **lrun:**
     Runs the verified checker/counter on 34 benchmark files
-* clean:
+* **clean:**
     Removes intermediate files
-* superclean:
+* **superclean:**
     Removes all generated files
 
     
