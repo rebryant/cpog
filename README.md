@@ -14,11 +14,11 @@ Running the toolchain using prototype (unverified) tools requires the following:
 * A python3 interpreter
 * An installed version of the [D4 knowledge compiler](https://github.com/crillab/d4)
 * An installed version of the [Cadical SAT solver](https://github.com/arminbiere/cadical)
-* An installed version of the drat-trim [DRAT proof checker](https://github.com/marijnheule/drat-trim)
+* An installed version of the [drat-trim proof checker](https://github.com/marijnheule/drat-trim)
 
 In addition, running the toolchain using formally verified tools requires the following:
 
-* An installed verions of the Lean [elan version manager](https://github.com/leanprover/elan)
+* An installed version of the Lean [elan version manager](https://github.com/leanprover/elan)
 
 # Directories
 
