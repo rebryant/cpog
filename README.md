@@ -1,9 +1,9 @@
-## CRAT
+## CRAT Knowledge Compiler Certifier
 
-This repository contains a set of tools for certifying the D4 model
-counter.  It is based on the CRAT verification framework.  A CRAT file
+This repository contains a set of tools for certifying results from the D4 knowledge
+compiler.  It is based on the **CRAT** verification framework.  A CRAT file
 encodes both a representation of a Boolean formula as a
-*partitioned-operation graph* (POG), and a proof that this POG is
+**partitioned-operation graph** (POG), and a proof that this POG is
 logically equivalent to the input formula
 
 # Installation:
