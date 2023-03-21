@@ -4,7 +4,7 @@ install:
 linstall:
 	cd VerifiedChecker ; make install
 
-test:
+ptest:
 	cd test ; make test
 
 ltest:

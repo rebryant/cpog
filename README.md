@@ -40,7 +40,7 @@ In addition, running the toolchain using formally verified tools requires the fo
     Compiles the CRAT generator and prototype checker.
 * **linstall:**
     Compiles the Lean verifier
-* **test:**
+* **ptest:**
     Runs the prototype tools on two simple test problems
 * **ltest:**
     Runs the verified tools on two simple test problems
