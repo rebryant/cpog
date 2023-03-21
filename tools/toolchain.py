@@ -197,7 +197,7 @@ def runLeanCheck(root, home, logFile):
     cnfName = home + "/" + root + ".cnf"
     cratName = home + "/" + root + ".crat"
     cmd = [leanCheckProgram]
-    cmd += [cnfName, cratName]
+    cmd += ["-c", cnfName, cratName]
     ok =  runProgram("LCHECK", root, cmd, logFile)
     return ok
 
@@ -225,9 +225,6 @@ def runSequence(root, home, force):
     if useLean:
         extension = "lean_" + extension
     logName = root + "." + extension
-    if not force and os.path.exists(logName):
-            print("Already have file %s.  Skipping benchmark" % logName)
-            return
     try:
         logFile = open(logName, 'w')
     except:
@@ -288,6 +285,7 @@ def run(name, args):
             group = False
         elif opt == '-F':
             useLean = True
+            force = False
         else:
             print("Unknown option '%s'" % opt)
             usage(name)

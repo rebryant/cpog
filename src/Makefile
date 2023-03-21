@@ -5,7 +5,10 @@ OPT=-O2
 CFLAGS=-g $(OPT) -Wno-nullability-completeness
 CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11
 
+install: all
+
 all: crat-check crat-gen
+
 
 crat-check: crat-check.c
 	$(CC) $(CFLAGS) crat-check.c -o crat-check
@@ -41,6 +44,9 @@ crat-gen: crat-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
 
 clean:
 	rm -f *.o *~
+	rm -rf *.dSYM
+
+superclean: clean
 	rm -f crat-gen crat-check
 
 
