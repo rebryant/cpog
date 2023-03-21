@@ -8,33 +8,38 @@ logically equivalent to the input formula
 
 # Installation:
 
-Running the toolchain requires the following:
+Running the toolchain using prototype (unverified) tools requires the following:
 
 * A C and C++ compiler
 * A python3 interpreter
-* An installed version of the [D4 knowledge compiler](https:://github.com/crillab/d4))
+* An installed version of the [D4 knowledge compiler](https://github.com/crillab/d4)
 * An installed version of the [Cadical SAT solver](https://github.com/arminbiere/cadical)
 * An installed version of the drat-trim [DRAT proof checker](https://github.com/marijnheule/drat-trim)
+
+Running the toolchain using formally verified tools requires the following:
+
 * An installed verions of the Lean [elan version manager](https://github.com/leanprover/elan)
 
 # Directories
 
-* VerifiedChecker:
+* **VerifiedChecker:**
     Code for the verified checker and counter
-* benchmarks:
+* **benchmarks:**
     A sample set of benchmarks from the 2022 standard and weighted model counting competitions
-* src:
+* **src:**
     Code for the CRAT generator and prototype checker
-* test:
+* **test:**
     Two very simple test problems
-* tools:
+* **tools:**
     Code for the prototype counter and for a program to run the entire toolchain
 
 
 # Make Options
 
 * install:
-    Compiles the CRAT generator, prototype checker, and the Lean verifier
+    Compiles the CRAT generator and prototype checker
+* linstall:
+    Compiles the Lean verifier
 * run:
     Runs the generator, prototype checker, and prototype counter on 34 benchmark files
 * lrun:

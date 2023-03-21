@@ -1,5 +1,7 @@
 install:
 	cd src ; make install
+
+linstall:
 	cd VerifiedChecker ; make install
 
 run:
