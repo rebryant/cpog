@@ -18,7 +18,7 @@ Running the toolchain using prototype (unverified) tools requires the following:
 
 In addition, running the toolchain using formally verified tools requires the following:
 
-* An installed version of the Lean [elan version manager](https://github.com/leanprover/elan)
+* An installed version of the Lean [Elan version manager](https://github.com/leanprover/elan)
 
 # Directories
 
