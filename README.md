@@ -45,9 +45,9 @@ In addition, running the toolchain using formally verified tools requires the fo
 * **ltest:**
     Runs the verified tools on two simple test problems
 * **run:**
-    Runs the generator, prototype checker, and prototype counter on 34 benchmark files
+    Runs the generator, prototype checker, and prototype counter on 30 benchmark files
 * **lrun:**
-    Runs the verified checker/counter on 34 benchmark files
+    Runs the verified checker/counter on 30 benchmark files
 * **clean:**
     Removes intermediate files
 * **superclean:**
