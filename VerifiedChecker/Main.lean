@@ -11,9 +11,9 @@ import ProofChecker.Checker.CheckerCore
 
 def runCheckCmd (p : Cli.Parsed) : IO UInt32 := do
   let cnfFname := p.positionalArg! "cnf"
-  let cratFname := p.positionalArg! "crat"
+  let cpogFname := p.positionalArg! "cpog"
   let printFormula := p.hasFlag "print-cnf"
-  let printProof := p.hasFlag "print-crat"
+  let printProof := p.hasFlag "print-cpog"
   let count := p.hasFlag "count"
   printlnFlush "Parsing CNF.."
   let (cnf, nVars) ← ICnf.readDimacsFile cnfFname.value
@@ -21,11 +21,11 @@ def runCheckCmd (p : Cli.Parsed) : IO UInt32 := do
   if printFormula then
     IO.println "Parsed CNF:"
     IO.print (cnf.toDimacs nVars)
-  printlnFlush "Parsing CRAT.."
-  let pf ← CratStep.readDimacsFile cratFname.value
+  printlnFlush "Parsing CPOG.."
+  let pf ← CpogStep.readDimacsFile cpogFname.value
   IO.println "done."
   if printProof then
-    IO.println "Parsed CRAT:"
+    IO.println "Parsed CPOG:"
     for step in pf do
       IO.println step.toDimacs
   printlnFlush "Checking proof.."
@@ -44,18 +44,18 @@ where
     (← IO.getStdout).flush
 
 def checkCmd : Cli.Cmd := `[Cli|
-  CheckCRAT VIA runCheckCmd; ["0.1.0"]
-  "Check a CRAT proof."
+  CheckCPOG VIA runCheckCmd; ["0.1.0"]
+  "Check a CPOG proof."
 
   FLAGS:
     v, verbose;         "Print diagnostic information."
     c, count;           "Output the unweighted model count."
     "print-cnf";        "Reprint the parsed CNF formula."
-    "print-crat";       "Reprint the parsed CRAT proof."
+    "print-cpog";       "Reprint the parsed CPOG proof."
 
   ARGS:
     cnf  : String;      "The CNF input file."
-    crat : String;      "The CRAT proof file."
+    cpog : String;      "The CPOG proof file."
 
   EXTENSIONS:
     Cli.author "Wojciech Nawrocki"

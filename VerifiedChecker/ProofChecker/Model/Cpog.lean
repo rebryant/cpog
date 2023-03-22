@@ -10,7 +10,7 @@ import ProofChecker.Model.PropVars
 import ProofChecker.Model.Extensions
 import ProofChecker.Count.PropForm
 
-/-! Justifications of CRAT steps. -/
+/-! Justifications of CPOG steps. -/
 
 open PropTerm
 

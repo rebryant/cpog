@@ -122,7 +122,7 @@ def ICnf.toDimacs (cnf : ICnf) (nVars : Nat) : String := Id.run do
   return s
   
 /-- Return a proof step given a DIMACS line. -/
-def CratStep.ofTokens (tks : Array Token) : Except String CratStep := do
+def CpogStep.ofTokens (tks : Array Token) : Except String CpogStep := do
   let toUpHints (tks : Array Token) : Except String (Array Nat) := do
     if let #[.str "*"] := tks then
       throw s!"got unhinted proof, but all hints need to be filled in"
@@ -165,12 +165,12 @@ def CratStep.ofTokens (tks : Array Token) : Except String CratStep := do
   | _, .str "i" => throw s!"i command is deprecated"
   | _, _ => throw s!"unexpected command"
 
-def CratStep.readDimacsFile (fname : String) : IO (Array CratStep) := do
+def CpogStep.readDimacsFile (fname : String) : IO (Array CpogStep) := do
   let lns ← IO.FS.lines fname
   let lns := Dimacs.tokenizeLines lns
   let mut pf := #[]
   for ln in lns do
-    match CratStep.ofTokens ln with
+    match CpogStep.ofTokens ln with
     | .ok v => pf := pf.push v
     | .error e =>
       throw <| IO.userError s!"error on line '{" ".intercalate <| ln.toList.map toString}': {e}"

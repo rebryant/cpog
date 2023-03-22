@@ -10,13 +10,13 @@ import ProofChecker.Data.ClauseDb
 import ProofChecker.Data.Pog
 import ProofChecker.Count.Pog
 import ProofChecker.Data.HashSet
-import ProofChecker.Model.Crat
+import ProofChecker.Model.Cpog
 
 /-- An index into the `ClauseDb`. -/
 abbrev ClauseIdx := Nat
 
-/-- A step in a CRAT proof. -/
-inductive CratStep
+/-- A step in a CPOG proof. -/
+inductive CpogStep
   | /-- Add asymmetric tautology. -/
     addAt (idx : ClauseIdx) (C : IClause) (upHints : Array ClauseIdx)
   | /-- Delete asymmetric tautology. -/
@@ -28,9 +28,9 @@ inductive CratStep
   | /-- Declare POG root. -/
     root (r : ILit)
 
-namespace CratStep
+namespace CpogStep
 
-def toDimacs : CratStep → String
+def toDimacs : CpogStep → String
   | addAt idx C upHints => s!"{idx} a {pArray C} 0 {pArray upHints} 0"
   | delAt idx upHints => s!"dc {idx} {pArray upHints} 0"
   | prod idx x ls => s!"{idx} p {x} {pArray ls} 0"
@@ -40,7 +40,7 @@ where
   pArray {α : Type} [ToString α] (a : Array α) :=
     " ".intercalate (a.foldr (init := []) fun a acc => toString a :: acc)
 
-instance : ToString CratStep where
+instance : ToString CpogStep where
   toString := fun
     | addAt idx C upHints => s!"{idx} a {C} 0 (hints: {upHints})"
     | delAt idx upHints => s!"dc {idx} (hints: {upHints})"
@@ -48,7 +48,7 @@ instance : ToString CratStep where
     | sum idx x l₁ l₂ upHints => s!"{idx} s {x} {l₁} {l₂} (hints: {upHints})"
     | root x => s!"r {x}"
 
-end CratStep
+end CpogStep
 
 inductive CheckerError where
   | graphUpdateError (err : PogError)
@@ -1148,7 +1148,7 @@ def checkFinalState : CheckerM { p : ICnf × Pog × ILit //
 
   return ⟨(st.inputCnf, st.pog, r), this⟩
 
-def checkProofStep (step : CratStep) : CheckerM Unit :=
+def checkProofStep (step : CpogStep) : CheckerM Unit :=
   match step with
   | .addAt idx C hints => addAt idx C hints
   | .delAt idx hints => delAt idx hints
@@ -1156,9 +1156,9 @@ def checkProofStep (step : CratStep) : CheckerM Unit :=
   | .sum idx x l₁ l₂ hints => addSum idx x l₁ l₂ hints
   | .root r => setRoot r
 
-/-- Check a CRAT proof and throw if it is invalid. If `count = True`, also return the model count
+/-- Check a CPOG proof and throw if it is invalid. If `count = True`, also return the model count
 of `cnf` over `nVars` variables. Otherwise return an unspecified number. -/
-def checkProof (cnf : ICnf) (nVars : Nat) (pf : Array CratStep) (count : Bool := False) :
+def checkProof (cnf : ICnf) (nVars : Nat) (pf : Array CpogStep) (count : Bool := False) :
     Except String Nat := do
   let mut st : State ← Except.mapError toString (initial cnf nVars)
   for step in pf do
