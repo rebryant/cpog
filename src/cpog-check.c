@@ -33,12 +33,12 @@
 #include <stdarg.h>
 
 void usage(char *name) {
-    printf("Usage: %s [-h] [-v VERB] [-1] FILE.cnf [FILE.crat]\n", name);
+    printf("Usage: %s [-h] [-v VERB] [-1] FILE.cnf [FILE.cpog]\n", name);
     printf(" -h VERB      Print this message\n");
     printf(" -v           Set verbosity level\n");
     printf(" -1           Perform one-sided check (don't verify assertions)\n");
     printf("    FILE.cnf  Input CNF file\n");
-    printf("    FILE.crat Input CRAT file\n");
+    printf("    FILE.cpog Input CPOG file\n");
     exit(0);
 }
 
@@ -1150,15 +1150,15 @@ node_t *node_new(node_type_t type, int id, int cid) {
     return node;
 }
 
-int crat_operation_count = 0;
-int crat_assertion_count = 0;
-int crat_assertion_deletion_count = 0;
-int crat_operation_clause_count = 0;
+int cpog_operation_count = 0;
+int cpog_assertion_count = 0;
+int cpog_assertion_deletion_count = 0;
+int cpog_operation_clause_count = 0;
 
-void crat_show(FILE *out) {
+void cpog_show(FILE *out) {
     int cid;
     int idx, nid;
-    printf("CRAT Operations\n");
+    printf("CPOG Operations\n");
     for (idx = 0; idx < node_asize; idx++) {
 	nid = input_variable_count + 1 + idx;
 	node_t *node = node_find(nid);
@@ -1177,7 +1177,7 @@ void crat_show(FILE *out) {
 }
 
 /* Handlers for different command types.  Each starts after parsing command token */
-void crat_read_root() {
+void cpog_read_root() {
     token_t token = token_next();
     if (token != TOK_INT)
 	err_printf(__cfunc__, "Unexpected token %s ('%s')\n", token_name[token], token_last);
@@ -1185,7 +1185,7 @@ void crat_read_root() {
     info_printf(3, "Root literal declared as %d\n", declared_root);
 }
 
-void crat_add_clause(int cid) {
+void cpog_add_clause(int cid) {
     lset_clear();
     start_clause(cid);
     while (true) {
@@ -1205,15 +1205,15 @@ void crat_add_clause(int cid) {
     else
 	rup_run(cid, false);
     token_confirm_eol();
-    crat_assertion_count ++;
+    cpog_assertion_count ++;
     info_printf(3, "Processed clause %d addition\n", cid);
 }
 
-void crat_delete_clause() {
+void cpog_delete_clause() {
     /* Before start deletions, lets show what was there */ 
-    if (verb_level >= 3 && crat_assertion_deletion_count == 0) {
+    if (verb_level >= 3 && cpog_assertion_deletion_count == 0) {
 	info_printf(3, "Before performing deletions\n");
-	crat_show(stdout);
+	cpog_show(stdout);
 	printf("All clauses:\n");
 	clause_show_all(stdout);
     }
@@ -1229,11 +1229,11 @@ void crat_delete_clause() {
     if (!tautology)
 	rup_run(cid, false);
     token_find_eol();
-    crat_assertion_deletion_count ++;
+    cpog_assertion_deletion_count ++;
     info_printf(3, "Processed clause %d deletion\n", cid);
 }
 
-void crat_add_product(int cid) {
+void cpog_add_product(int cid) {
     token_t token = token_next();
     if (token != TOK_INT)
 	err_printf(__cfunc__, "Expected operation number.  Got %s ('%s') instead\n", token_name[token], token_last);
@@ -1300,12 +1300,12 @@ void crat_add_product(int cid) {
 	finish_clause(cid+i+1);
     }
     clause_add_defining(cid, cid+n+1);
-    crat_operation_count ++;
-    crat_operation_clause_count += (n+1);
+    cpog_operation_count ++;
+    cpog_operation_clause_count += (n+1);
     info_printf(3, "Processed product %d addition\n", nid);
 }
 
-void crat_add_sum(int cid) {
+void cpog_add_sum(int cid) {
     token_t token = token_next();
     if (token != TOK_INT)
 	err_printf(__cfunc__, "Expected operation number.  Got %s ('%s') instead\n", token_name[token], token_last);
@@ -1367,12 +1367,12 @@ void crat_add_sum(int cid) {
 	finish_clause(cid+i+1);
     }
     clause_add_defining(cid, cid+n+1);
-    crat_operation_count ++;
-    crat_operation_clause_count += (n+1);
+    cpog_operation_count ++;
+    cpog_operation_clause_count += (n+1);
     info_printf(3, "Processed sum %d addition\n", nid);
 }
 
-void crat_delete_operation() {
+void cpog_delete_operation() {
     token_t token = token_next();
     if (token != TOK_INT)
 	err_printf(__cfunc__, "Expecting integer operation ID.  Got %s ('%s') instead\n", token_name[token], token_last);
@@ -1396,7 +1396,7 @@ void crat_delete_operation() {
 }
 
 /* Check end condition.  Return literal representation of root node */
-int crat_final_root() {
+int cpog_final_root() {
     /* First delete all of the clauses added for operations */
     int idx, nid, i;
     int root = 0;
@@ -1433,7 +1433,7 @@ int crat_final_root() {
     return root;
 }
 
-void crat_read(char *fname) {
+void cpog_read(char *fname) {
     token_setup(fname);
     /* Find and parse each command */
     while (true) {
@@ -1451,49 +1451,49 @@ void crat_read(char *fname) {
 	    token = token_next();
 	} 
 	if (token != TOK_STRING) 
-	    err_printf(__cfunc__, "Expecting CRAT command.  Got %s ('%s') instead\n", token_name[token], token_last);
+	    err_printf(__cfunc__, "Expecting CPOG command.  Got %s ('%s') instead\n", token_name[token], token_last);
 	else if (strcmp(token_last, "a") == 0)
-	    crat_add_clause(cid);
+	    cpog_add_clause(cid);
 	else if (strcmp(token_last, "r") == 0)
-	    crat_read_root();
+	    cpog_read_root();
 	else if (strcmp(token_last, "dc") == 0)
-	    crat_delete_clause();
+	    cpog_delete_clause();
  	else if (strcmp(token_last, "p") == 0)
-	    crat_add_product(cid);
+	    cpog_add_product(cid);
 	else if (strcmp(token_last, "s") == 0)
-	    crat_add_sum(cid);
+	    cpog_add_sum(cid);
 	else if (strcmp(token_last, "do") == 0)
-	    crat_delete_operation();
+	    cpog_delete_operation();
 	else 
-	    err_printf(__cfunc__, "Invalid CRAT command '%s'\n", token_last);
+	    err_printf(__cfunc__, "Invalid CPOG command '%s'\n", token_last);
     }
     token_finish();
-    int all_clause_count = crat_assertion_count + crat_operation_clause_count;
-    data_printf(1, "Read CRAT file with %d operations,  %d asserted + %d defining = %d clauses\n",
-		crat_operation_count, crat_assertion_count,
-		crat_operation_clause_count, all_clause_count);
+    int all_clause_count = cpog_assertion_count + cpog_operation_clause_count;
+    data_printf(1, "Read CPOG file with %d operations,  %d asserted + %d defining = %d clauses\n",
+		cpog_operation_count, cpog_assertion_count,
+		cpog_operation_clause_count, all_clause_count);
     data_printf(3, "Clauses divided into %d blocks\n", clause_block_count);
-    data_printf(1, "Deleted %d input and asserted clauses\n", crat_assertion_deletion_count);
+    data_printf(1, "Deleted %d input and asserted clauses\n", cpog_assertion_deletion_count);
 }
 
-void run(char *cnf_name, char *crat_name) {
+void run(char *cnf_name, char *cpog_name) {
     double start = tod();
     cnf_read(cnf_name);
     if (verb_level >= 3)
 	cnf_show(stdout);
-    if (crat_name != NULL) {
-	crat_read(crat_name);
+    if (cpog_name != NULL) {
+	cpog_read(cpog_name);
 	if (verb_level >= 3) {
-	    crat_show(stdout);
+	    cpog_show(stdout);
 	    printf("All clauses:\n");
 	    clause_show_all(stdout);
 	}
-	int root = crat_final_root();
+	int root = cpog_final_root();
 	data_printf(1, "Final root literal %d\n", root);
 	if (one_sided)
-	    data_printf(0, "ONE-SIDED VALID.  CRAT representation partially verified\n");
+	    data_printf(0, "ONE-SIDED VALID.  CPOG representation partially verified\n");
 	else
-	    data_printf(0, "FULL-PROOF SUCCESS.  CRAT representation verified\n");
+	    data_printf(0, "FULL-PROOF SUCCESS.  CPOG representation verified\n");
     }
     double secs = tod() - start;
     data_printf(1, "Elapsed seconds: %.3f\n", secs);
@@ -1501,7 +1501,7 @@ void run(char *cnf_name, char *crat_name) {
 
 int main(int argc, char *argv[]) {
     char *cnf_name = NULL;
-    char *crat_name = NULL;
+    char *cpog_name = NULL;
     verb_level = 1;
     if (argc <= 1) 
 	usage(argv[0]);
@@ -1530,8 +1530,8 @@ int main(int argc, char *argv[]) {
     }
     cnf_name = argv[argi++];
     if (argi < argc) {
-	crat_name = argv[argi++];
+	cpog_name = argv[argi++];
     }
-    run(cnf_name, crat_name);
+    run(cnf_name, cpog_name);
     return 0;
 }

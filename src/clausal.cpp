@@ -2183,8 +2183,8 @@ bool Cnf_reasoner::check_active() {
 }
 
 int Cnf_reasoner::monolithic_validate_root(int root_literal) {
-    const char *cnf_name = "crat_validation_xxx.cnf";
-    const char *lrat_name = "crat_validation_xxx.lrat";
+    const char *cnf_name = "cpog_validation_xxx.cnf";
+    const char *lrat_name = "cpog_validation_xxx.lrat";
     char cmd[350];
 
     FILE *cnf_out = fopen(cnf_name, "w");

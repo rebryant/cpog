@@ -21,7 +21,7 @@
 ########################################################################################
 
 
-# Model counter for CRAT POG.
+# Model counter for CPOG files
 import sys
 import getopt
 import datetime
@@ -34,7 +34,7 @@ except:
     pass
 
 def usage(name):
-    print("Usage: %s -i FILE.cnf -p FILE.crat [-w W1:W2:...:Wn]" % name)
+    print("Usage: %s -i FILE.cnf -p FILE.cpog [-w W1:W2:...:Wn]" % name)
     print("   -w WEIGHTS   Provide colon-separated set of input weights.")
     print("                Each should be between 0 and 100 (will be scaled by 1/100)")
 
@@ -45,7 +45,7 @@ def usage(name):
 
 
 ######################################################################################
-# CRAT Syntax
+# CPOG Syntax
 ######################################################################################
 # Notation
 #  Id: Clause Id
@@ -586,7 +586,7 @@ def run(name, args):
         print("COUNTER: Need CNF file name")
         return False
     if proofName is None:
-        print("COUNTER: Need CRAT file name")
+        print("COUNTER: Need CPOG file name")
         return False
     start = datetime.datetime.now()
     creader = CnfReader(cnfName)

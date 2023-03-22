@@ -1,7 +1,7 @@
-## CRAT Knowledge Compiler Certifier
+## CPOG Knowledge Compiler Certifier
 
 This repository contains a set of tools for certifying results from the D4 knowledge
-compiler.  It is based on the **CRAT** verification framework.  A CRAT file
+compiler.  It is based on the **CPOG** verification framework.  A CPOG file
 encodes both a representation of a Boolean formula as a
 **partitioned-operation graph** (POG), and a proof that this POG is
 logically equivalent to the input formula
@@ -27,7 +27,7 @@ In addition, running the toolchain using formally verified tools requires the fo
 * **benchmarks:**
     A sample set of benchmarks from the 2022 standard and weighted model counting competitions
 * **src:**
-    Code for the CRAT generator and prototype checker
+    Code for the CPOG generator and prototype checker
 * **test:**
     Two very simple test problems
 * **tools:**
@@ -37,7 +37,7 @@ In addition, running the toolchain using formally verified tools requires the fo
 # Make Options
 
 * **install:**
-    Compiles the CRAT generator and prototype checker.
+    Compiles the CPOG generator and prototype checker.
 * **linstall:**
     Compiles the Lean verifier
 * **ptest:**

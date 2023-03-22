@@ -33,7 +33,7 @@ import time
 def usage(name):
     print("Usage: %s [-h] [-v VERB] [-1] [-m] [-L] [-G] [-F] FILE.EXT ..." % name)
     print("  -h       Print this message")
-    print("  -v VERB  Set verbosity level.  Level 2 causes comments in .crat file")
+    print("  -v VERB  Set verbosity level.  Level 2 causes comments in .cpog file")
     print("  -1       Generate one-sided proof (don't validate assertions)")
     print("  -m       Monolithic mode: Do validation with single call to SAT solver")
     print("  -L       Expand each node, rather than using lemmas")
@@ -54,17 +54,17 @@ useLean = False
 d4Program = "d4"
 
 genHome = "../src"
-genProgram = genHome + "/crat-gen"
+genProgram = genHome + "/cpog-gen"
 
 checkHome = "../src"
-checkProgram = checkHome + "/crat-check"
+checkProgram = checkHome + "/cpog-check"
 
 leanHome =  "../VerifiedChecker"
 leanCheckProgram = leanHome + "/build/bin/checker"
 
 interpreter = "python3"
 countHome = "../tools"
-countProgram = countHome + "/crat-count.py"
+countProgram = countHome + "/cpog-count.py"
 
 timeLimits = { "D4" : 4000, "GEN" : 10000, "FCHECK" : 1000, "LCHECK" : 4000, "COUNT" : 4000 }
 
@@ -148,11 +148,11 @@ def runD4(root, home, logFile, force):
 def runPartialGen(root, home, logFile, force):
     cnfName = home + "/" + root + ".cnf"
     nnfName = home + "/" + root + ".nnf"
-    cratName = home + "/" + root + ".crat"
-    cmd = [genProgram, "-p", cnfName, nnfName, cratName]
+    cpogName = home + "/" + root + ".cpog"
+    cmd = [genProgram, "-p", cnfName, nnfName, cpogName]
     ok = runProgram("GEN", root, cmd, logFile)
-    if not ok and os.path.exists(cratName):
-        os.remove(cratName)
+    if not ok and os.path.exists(cpogName):
+        os.remove(cpogName)
     return ok
 
 
@@ -160,8 +160,8 @@ def runGen(root, home, logFile, force):
     extraLogName = "d2p.log"
     cnfName = home + "/" + root + ".cnf"
     nnfName = home + "/" + root + ".nnf"
-    cratName = home + "/" + root + ".crat"
-    if not force and os.path.exists(cratName):
+    cpogName = home + "/" + root + ".cpog"
+    if not force and os.path.exists(cpogName):
         return True
     cmd = [genProgram]
     if verbLevel != 1:
@@ -174,38 +174,38 @@ def runGen(root, home, logFile, force):
         cmd += ['-e']
     if not group:
         cmd += ['-s']
-    cmd += ["-C", str(clauseLimit), "-L", extraLogName, cnfName, nnfName, cratName]
+    cmd += ["-C", str(clauseLimit), "-L", extraLogName, cnfName, nnfName, cpogName]
     ok = runProgram("GEN", root, cmd, logFile, extraLogName = extraLogName)
-    checkFile("GEN", cratName, logFile)
-    if not ok and os.path.exists(cratName):
-        os.remove(cratName)
+    checkFile("GEN", cpogName, logFile)
+    if not ok and os.path.exists(cpogName):
+        os.remove(cpogName)
     return ok
 
 def runCheck(root, home, logFile):
     cnfName = home + "/" + root + ".cnf"
-    cratName = home + "/" + root + ".crat"
+    cpogName = home + "/" + root + ".cpog"
     cmd = [checkProgram]
     if verbLevel != 1:
         cmd += ['-v', str(verbLevel)]
     if oneSided:
         cmd += ['-1']
-    cmd += [cnfName, cratName]
+    cmd += [cnfName, cpogName]
     ok =  runProgram("FCHECK", root, cmd, logFile)
     return ok
 
 def runLeanCheck(root, home, logFile):
     cnfName = home + "/" + root + ".cnf"
-    cratName = home + "/" + root + ".crat"
+    cpogName = home + "/" + root + ".cpog"
     cmd = [leanCheckProgram]
-    cmd += ["-c", cnfName, cratName]
+    cmd += ["-c", cnfName, cpogName]
     ok =  runProgram("LCHECK", root, cmd, logFile)
     return ok
 
 
 def runCount(root, home, logFile):
     cnfName = home + "/" + root + ".cnf"
-    cratName = home + "/" + root + ".crat"
-    cmd = [interpreter, countProgram, "-i", cnfName, "-p", cratName]
+    cpogName = home + "/" + root + ".cpog"
+    cmd = [interpreter, countProgram, "-i", cnfName, "-p", cpogName]
     ok = runProgram("COUNT", root, cmd, logFile)
     return ok
 

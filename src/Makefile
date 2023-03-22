@@ -7,11 +7,11 @@ CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11
 
 install: all
 
-all: crat-check crat-gen
+all: cpog-check cpog-gen
 
 
-crat-check: crat-check.c
-	$(CC) $(CFLAGS) crat-check.c -o crat-check
+cpog-check: cpog-check.c
+	$(CC) $(CFLAGS) cpog-check.c -o cpog-check
 
 ilist.o: ilist.c ilist.h
 	$(CC) $(CFLAGS) -c ilist.c
@@ -31,8 +31,8 @@ writer.o: ilist.h report.h writer.hh writer.cpp
 pog.o: pog.hh clausal.hh counters.h pog.cpp
 	$(CXX) $(CPPFLAGS) -c pog.cpp
 
-crat-gen: crat-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
-	$(CXX) $(CPPFLAGS) -o crat-gen crat-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
+cpog-gen: cpog-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
+	$(CXX) $(CPPFLAGS) -o cpog-gen cpog-gen.cpp clausal.o ilist.o report.o counters.o writer.o pog.o
 
 .SUFFIXES: .c .cpp .o
 
@@ -47,6 +47,6 @@ clean:
 	rm -rf *.dSYM
 
 superclean: clean
-	rm -f crat-gen crat-check
+	rm -f cpog-gen cpog-check
 
 
