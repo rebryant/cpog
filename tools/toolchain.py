@@ -2,7 +2,7 @@
 
 #####################################################################################
 # Copyright (c) 2023 Randal E. Bryant, Carnegie Mellon University
-# Last edit: March 20, 2023
+# Last edit: May 20, 2023
 # 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 # associated documentation files (the "Software"), to deal in the Software without restriction,
@@ -62,11 +62,7 @@ checkProgram = checkHome + "/cpog-check"
 leanHome =  "../VerifiedChecker"
 leanCheckProgram = leanHome + "/build/bin/checker"
 
-interpreter = "python3"
-countHome = "../tools"
-countProgram = countHome + "/cpog-count.py"
-
-timeLimits = { "D4" : 4000, "GEN" : 10000, "FCHECK" : 1000, "LCHECK" : 4000, "COUNT" : 4000 }
+timeLimits = { "D4" : 4000, "GEN" : 10000, "FCHECK" : 1000, "LCHECK" : 4000 }
 
 clauseLimit = (1 << 31) - 1
 
@@ -202,13 +198,6 @@ def runLeanCheck(root, home, logFile):
     return ok
 
 
-def runCount(root, home, logFile):
-    cnfName = home + "/" + root + ".cnf"
-    cpogName = home + "/" + root + ".cpog"
-    cmd = [interpreter, countProgram, "-i", cnfName, "-p", cpogName]
-    ok = runProgram("COUNT", root, cmd, logFile)
-    return ok
-
 def runSequence(root, home, force):
     result = ""
     prefix = "OVERALL"
@@ -238,7 +227,6 @@ def runSequence(root, home, force):
         ok = ok and runLeanCheck(root, home, logFile)
     else:
         ok = ok and runCheck(root, home, logFile)
-        ok = ok and runCount(root, home, logFile)
     delta = datetime.datetime.now() - start
     seconds = delta.seconds + 1e-6 * delta.microseconds
     result += "%s LOG: Elapsed time = %.3f seconds\n" % (prefix, seconds)
