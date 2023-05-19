@@ -31,11 +31,12 @@
 #include <sys/time.h>
 #include <limits.h>
 #include <stdarg.h>
+#include "q25.h"
 
 void usage(char *name) {
     printf("Usage: %s [-h] [-v VERB] [-1] FILE.cnf [FILE.cpog]\n", name);
-    printf(" -h VERB      Print this message\n");
-    printf(" -v           Set verbosity level\n");
+    printf(" -h           Print this message\n");
+    printf(" -v VERB      Set verbosity level\n");
     printf(" -1           Perform one-sided check (don't verify assertions)\n");
     printf("    FILE.cnf  Input CNF file\n");
     printf("    FILE.cpog Input CPOG file\n");
@@ -50,7 +51,7 @@ void usage(char *name) {
 #define MIN_SIZE 10
 #define MAX_GAP 10
 #define GROW_RATIO 1.45
-#define DPREFIX "FCHECK"
+#define DPREFIX "CHECK"
 #define __cfunc__ (char *) __func__
 
 /* How many ints fit into a single chunk (2^20 = 4MB) */
@@ -478,6 +479,17 @@ void token_setup(char *fname) {
 void token_finish() {
     fclose(token_file);
     token_file = NULL;
+}
+
+bool skip_space() {
+    int c;
+    do
+	c = fgetc(token_file);
+    while(c != '\n' && c != EOF && isspace(c));
+    if (c == EOF || c == '\n')
+	return false;
+    ungetc(c, token_file);
+    return true;
 }
 
 token_t token_next() {
@@ -1098,6 +1110,7 @@ typedef struct {
     int cid;                /* First defining clause ID */
     ilist dependency_list;  /* All variables in subgraph */
     ilist children;         /* Node IDs of children */
+    q25_ptr ring_value;     /* For counting */
 } node_t;
 
 node_t *node_list = NULL;
@@ -1129,7 +1142,7 @@ node_t *node_new(node_type_t type, int id, int cid) {
 	    err_printf(__cfunc__, "Couldn't allocate space for node list of size %d\n", nasize);
 	int idx;
 	for (idx = node_asize; idx < nasize; idx++) {
-	    int nid = idx + input_variable_count;
+	    int nid = idx + input_variable_count + 1;
 	    node_list[idx].type = NODE_NONE;
 	    node_list[idx].id = nid;
 	    node_list[idx].cid = 0;
@@ -1146,6 +1159,7 @@ node_t *node_new(node_type_t type, int id, int cid) {
 	err_printf(__cfunc__, "Cannot create new node with id %d.  Id already in use\n", id);
     node->type = type;
     node->cid = cid;
+    node->ring_value = NULL;
     node_count ++;
     return node;
 }
@@ -1456,7 +1470,7 @@ void cpog_read(char *fname) {
 	    cpog_add_clause(cid);
 	else if (strcmp(token_last, "r") == 0)
 	    cpog_read_root();
-	else if (strcmp(token_last, "dc") == 0)
+	else if (strcmp(token_last, "dc") == 0 || strcmp(token_last, "d") == 0)
 	    cpog_delete_clause();
  	else if (strcmp(token_last, "p") == 0)
 	    cpog_add_product(cid);
@@ -1474,6 +1488,219 @@ void cpog_read(char *fname) {
 		cpog_operation_clause_count, all_clause_count);
     data_printf(3, "Clauses divided into %d blocks\n", clause_block_count);
     data_printf(1, "Deleted %d input and asserted clauses\n", cpog_assertion_deletion_count);
+}
+
+/*============================================
+  Counting
+============================================*/
+
+q25_ptr *input_weights = NULL;
+q25_ptr rescale = NULL;
+
+/* Perform ring evalation.
+   Given array of weights for input variables
+*/
+q25_ptr ring_evaluate(q25_ptr *input_weights) {
+    int id;
+    q25_ptr val;
+    printf("Root ID = %d\n", declared_root);
+    for (id = input_variable_count+1; id <= declared_root; id++) {
+	node_t *np = node_find(id);
+	val = q25_from_32(np->type == NODE_PRODUCT ? 1 : 0);
+	int i;
+	for (i = 0; i < ilist_length(np->children); i++) {
+	    int clit = np->children[i];
+	    int cid = IABS(clit);
+	    q25_ptr cval;
+	    if (cid <= input_variable_count) 
+		cval = input_weights[cid-1];
+	    else {
+		node_t *cnp = node_find(cid);
+		cval = cnp->ring_value;
+	    }
+	    if (clit < 0)
+		cval = q25_one_minus(cval);
+	    q25_ptr nval = np->type == NODE_PRODUCT ? q25_mul(val, cval) : q25_add(val, cval);
+	    q25_free(val);
+	    if (clit < 0)
+		q25_free(cval);
+	    val = nval;
+	}
+	np->ring_value = val;
+	if (verb_level >= 3) {
+	    info_printf(3, "Ring value for node %d: ", np->id);
+	    q25_write(val, stdout);
+	    printf("\n");
+	}
+    }
+    val = q25_copy(val);
+    for (id = input_variable_count+1; id <= declared_root; id++) {
+	node_t *np = node_find(id);
+	q25_free(np->ring_value);
+	np->ring_value = NULL;
+    }
+    return val;
+}
+
+q25_ptr count_regular() {
+    q25_ptr *input_weights = calloc(input_variable_count, sizeof(q25_ptr));
+    if (input_weights == NULL) {
+	err_printf("count_regular", "Couldn't allocate memory for weights\n");
+	return NULL;
+    }
+    q25_ptr qone = q25_from_32(1);
+    q25_ptr half = q25_scale(qone, -1, 0);
+    q25_free(qone);
+    int v;
+    for (v = 1; v <= input_variable_count; v++)
+	input_weights[v-1] = half;
+    q25_ptr density = ring_evaluate(input_weights);
+    q25_ptr result = q25_scale(density, input_variable_count, 0);
+    q25_free(half);
+    q25_free(density);
+    free(input_weights);
+    return result;
+}
+
+
+bool cnf_read_weights(char *fname) {
+    bool found_wmc = false;
+    token_setup(fname);
+    /* Find and parse wmc header */
+    while (true) {
+	token_t token = token_next();
+	if (token == TOK_EOL)
+	    continue;
+	if (token != TOK_STRING)
+	    err_printf(__cfunc__, "Unexpected token %s ('%s') while looking for WMC header\n", token_name[token], token_last);
+	if (token_last[0] == 'c') {
+	    if (!found_wmc) {
+		bool ok = true;
+		token = token_next();
+		ok = token == TOK_STRING && strcmp(token_last, "t") == 0;
+		if (ok)
+		    token = token_next();
+		ok = ok && token == TOK_STRING && strcmp(token_last, "wmc") == 0;
+		if (ok)
+		    found_wmc = true;
+	    }
+	    if (token != TOK_EOL)
+		token_find_eol();
+	} else if (token_last[0] == 'p') {
+	    if (found_wmc) {
+		token_find_eol();
+		break;
+	    }
+	    else {
+		/* Not weighted model counting problem */
+		token_finish();
+		return false;
+	    }
+	}
+    }
+    input_weights = calloc(input_variable_count, sizeof(q25_ptr));
+    q25_ptr *positive_weights = calloc(input_variable_count, sizeof(q25_ptr));
+    q25_ptr *negative_weights = calloc(input_variable_count, sizeof(q25_ptr));
+    if (!input_weights || !positive_weights || !negative_weights) 
+	err_printf(__cfunc__, "Couldn't allocate memory for weights\n");
+    rescale = q25_from_32(1);
+    while (true) {
+	token_t token = token_next();
+	if (token == TOK_EOF)
+	    break;
+	else if (token == TOK_EOL)
+	    continue;
+	else if (token == TOK_STRING && token_last[0] == 'c') {
+	    bool ok = true;
+	    token = token_next();
+	    ok = token == TOK_STRING && strcmp(token_last, "p") == 0;
+	    if (ok)
+		token = token_next();
+	    ok = ok && token == TOK_STRING && strcmp(token_last, "weight") == 0;
+	    if (ok)
+		token = token_next();
+	    ok = ok && token == TOK_INT;
+	    ok = ok && skip_space();
+	    if (!ok) {
+		if (token != TOK_EOL)
+		    token_find_eol();
+		continue;
+	    }
+	    int lit = token_value;
+	    int var = IABS(lit);
+
+	    if (var > input_variable_count)
+		err_printf(__cfunc__, "Invalid literal %d for weight\n", lit);
+	    q25_ptr cur_val = lit < 0 ? negative_weights[var-1] : positive_weights[var-1];
+	    if (cur_val != NULL)
+		err_printf(__cfunc__, "Already have weight for literal %d\n", lit);
+	    q25_ptr val = q25_read(token_file);
+	    ok = q25_is_valid(val);
+	    if (ok)
+		token = token_next();
+	    ok = ok && token == TOK_INT && token_value == 0;
+	    if (!ok)
+		err_printf(__cfunc__, "Couldn't read weight for literal %d\n", lit);
+	    token_find_eol();
+	    if (lit < 0)
+		negative_weights[var-1] = val;
+	    else
+		positive_weights[var-1] = val;
+	    info_printf(3, "Found weight for literal %d\n", lit);
+	} else
+	    token_find_eol();
+    }
+    token_finish();
+    /* Fix up weights */
+    int var;
+    for (var = 1; var <= input_variable_count; var++) {
+	q25_ptr pwt = positive_weights[var-1];
+	q25_ptr nwt = negative_weights[var-1];
+	if (nwt == NULL) {
+	    if (pwt == NULL)
+		err_printf(__cfunc__, "No weight assigned to either literal of variable %d\n", var);
+	    else
+		input_weights[var-1] = pwt;
+	} else if (pwt == NULL) {
+	    input_weights[var-1] = q25_one_minus(nwt);
+	    q25_free(nwt);
+	} else {
+	    q25_ptr sum = q25_add(nwt, pwt);
+	    if (q25_is_one(sum)) {
+		input_weights[var-1] = pwt;
+		q25_free(nwt); q25_free(sum);
+	    } else {
+		q25_ptr recip = q25_recip(sum);
+		if (!q25_is_valid(recip))
+		    err_printf(__cfunc__, "Could not get reciprocal of summed weights for variable %d\n", var);
+		q25_ptr nrescale = q25_mul(rescale, sum);
+		q25_free(rescale);
+		rescale = nrescale;
+		input_weights[var-1] = q25_mul(pwt, recip);
+		q25_free(nwt); q25_free(pwt);
+		q25_free(sum); q25_free(recip);
+	    }
+	}
+    }
+    free(positive_weights);
+    free(negative_weights);
+    data_printf(2, "Read weights from CNF file\n", input_variable_count, input_clause_count);
+    return true;
+}
+
+q25_ptr count_weighted(char *fname) {
+    if (!cnf_read_weights(fname))
+	return NULL;
+    q25_ptr val = ring_evaluate(input_weights);
+    q25_ptr rval = q25_mul(val, rescale);
+    q25_free(val);
+    q25_free(rescale);
+    int v;
+    for (v = 1; v < input_variable_count; v++) {
+	q25_free(input_weights[v-1]);
+    }
+    free(input_weights);
+    return rval;
 }
 
 void run(char *cnf_name, char *cpog_name) {
@@ -1495,7 +1722,24 @@ void run(char *cnf_name, char *cpog_name) {
 	else
 	    data_printf(0, "FULL-PROOF SUCCESS.  CPOG representation verified\n");
     }
-    double secs = tod() - start;
+    double post_check = tod();
+    q25_ptr mc = count_regular();
+    if (mc && q25_is_valid(mc)) {
+	data_printf(0, "Regular model count = ");
+	q25_write(mc, stdout);
+	printf("\n");
+    }
+    q25_free(mc);
+    q25_ptr wmc = count_weighted(cnf_name);
+    if (wmc && q25_is_valid(wmc)) {
+	data_printf(0, "Weighted model count = ");
+	q25_write(wmc, stdout);
+	printf("\n");
+    }
+    q25_free(wmc);
+    double secs = tod() - post_check;
+    data_printf(1, "Time to compute model counts: %.3f\n", secs);
+    secs = tod() - start;
     data_printf(1, "Elapsed seconds: %.3f\n", secs);
 }
 
