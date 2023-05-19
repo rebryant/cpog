@@ -31,7 +31,7 @@ In addition, running the toolchain using formally verified tools requires the fo
 * **test:**
     Two very simple test problems
 * **tools:**
-    Code for the prototype counter and for a program to run the entire toolchain
+    Code for a scripting program that runs the entire toolchain
 
 
 # Make Options
@@ -52,5 +52,3 @@ In addition, running the toolchain using formally verified tools requires the fo
     Removes intermediate files
 * **superclean:**
     Removes all generated files
-
-    
