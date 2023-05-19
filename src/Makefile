@@ -10,8 +10,8 @@ install: all
 all: cpog-check cpog-gen
 
 
-cpog-check: cpog-check.c
-	$(CC) $(CFLAGS) cpog-check.c -o cpog-check
+cpog-check: cpog-check.c q25.c q25.h
+	$(CC) $(CFLAGS) cpog-check.c q25.c -o cpog-check
 
 ilist.o: ilist.c ilist.h
 	$(CC) $(CFLAGS) -c ilist.c
