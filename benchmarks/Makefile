@@ -20,5 +20,5 @@ clean:
 	rm -f *~ d2p.log
 
 superclean: clean
-	rm -f *.nnf *.crat *log
+	rm -f *.nnf *.cpog *log
 
