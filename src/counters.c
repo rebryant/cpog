@@ -46,7 +46,7 @@ int get_count(counter_t counter) {
 
 }
 
-static bool timer_ok(timer_t timer) {
+static bool timer_ok(cpog_timer_t timer) {
     test_init();
     bool ok = timer >= 0 && timer < TIME_NUM;
     if (!ok)
@@ -54,13 +54,13 @@ static bool timer_ok(timer_t timer) {
     return ok;
 }
 
-void incr_timer(timer_t timer, double secs) {
+void incr_timer(cpog_timer_t timer, double secs) {
     if (!timer_ok(timer))
 	return;
     timers[timer] += secs;
 }
 
-double get_timer(timer_t timer) {
+double get_timer(cpog_timer_t timer) {
     if (!timer_ok(timer))
 	return -1;
     return timers[timer];
