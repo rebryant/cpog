@@ -201,6 +201,10 @@ def consumeProof (buf : ByteArray) : ParserM (Array CpogStep) := do
       pos := pos'
     else if b == 'd'.val.toUInt8 then
       pos := pos + 1
+      let b' := readByte buf pos
+      -- Older CPOG format uses `dc`, newer uses `d`
+      if b' == 'c'.val.toUInt8 then
+        pos := pos + 1
       pos ← consumeWhitespacePlus buf pos
       let (s, pos') ← consumeDel buf pos
       pf := pf.push s
