@@ -60,13 +60,14 @@ attribute [local simp] foldl_cons_fn foldl_append_fn
 theorem toListModel_eq (bkts : Buckets α β) : bkts.toListModel = bkts.val.data.bind (·.toList) := by
   simp [toListModel, Array.foldl_eq_foldl_data]
 
+theorem mem_toListModel (bkts : Buckets α β) (ab : α × β) :
+    ab ∈ bkts.toListModel ↔ ∃ (bkt : AssocList α β), bkt ∈ bkts.val.data ∧ ab ∈ bkt.toList := by
+  simp [toListModel_eq, mem_bind]
+
 theorem mem_toListModel_iff_mem_bucket (bkts : Buckets α β) (H : bkts.WF) (ab : α × β) :
     haveI := mkIdx (hash ab.fst) bkts.property
     ab ∈ bkts.toListModel ↔ ab ∈ (bkts.val[this.1.toNat]'this.2).toList := by
-  have : ab ∈ bkts.toListModel ↔ ∃ bkt ∈ bkts.val.data, ab ∈ bkt.toList := by
-    simp [toListModel_eq, mem_bind]
-  rw [this]
-  clear this
+  rw [mem_toListModel]
   apply Iff.intro
   . intro ⟨bkt, hBkt, hMem⟩
     have ⟨i, hGetI⟩ := Array.get_of_mem_data hBkt
@@ -157,7 +158,8 @@ theorem exists_of_toListModel_update_WF (bkts : Buckets α β) (H : bkts.WF) (i 
     have ⟨⟨j, hJ⟩, hEq⟩ := get_of_mem hBkt
     have hJ' : j < bkts.val.size := by
       apply Nat.lt_trans hJ
-      simp [Array.size, hTgt, Nat.lt_add_of_pos_right (Nat.succ_pos _)]
+      simp only [Array.size, hTgt, Nat.lt_add_of_pos_right (Nat.succ_pos _),
+        List.length_append, List.length_cons]
     have : ab ∈ (bkts.val[j]).toList := by
       suffices bkt = bkts.val[j] by rwa [this] at hAb
       have := @List.get_append _ _ (bkts.val[i] :: bs₂) j hJ
@@ -216,7 +218,16 @@ where
       simp [Perm.refl, drop_eq_nil_of_le this]
     termination_by _ i src _ => src.size - i
 
+theorem toListModel_length (bkts : Buckets α β) : bkts.toListModel.length = bkts.size := by
+  rw [size, toListModel_eq]
+  induction bkts.1.data <;> simp_all
+
 end Buckets
+
+@[simp]
+theorem toListModel_empty (cap : Nat) :
+    (@Imp.empty α β cap).buckets.toListModel = [] := by
+  simp [empty, empty']
 
 theorem findEntry?_eq (m : Imp α β) (H : m.buckets.WF) (a : α)
     : m.findEntry? a = m.buckets.toListModel.find? (·.1 == a) := by
@@ -233,6 +244,12 @@ theorem findEntry?_eq (m : Imp α β) (H : m.buckets.WF) (a : α)
   intro hBeq
   have : hash a' = hash a := LawfulHashable.hash_eq hBeq
   simp [Buckets.mem_toListModel_iff_mem_bucket m.buckets H, mkIdx, this]
+
+theorem find?_eq (m : Imp α β) (H : m.buckets.WF) (a : α)
+    : m.find? a = (m.buckets.toListModel.find? (·.1 == a)).map (·.2) := by
+  simp_rw [find?, AssocList.find?_eq_findEntry?]
+  show (m.findEntry? a).map (·.2) = _
+  rw [m.findEntry?_eq H a]
 
 theorem eraseP_toListModel_of_not_contains (m : Imp α β) (H : m.buckets.WF) (a : α) :
     haveI := mkIdx (hash a) m.buckets.property
@@ -342,6 +359,35 @@ theorem toListModel_erase' (m : Imp α β) (H : m.buckets.WF) (a : α) :
     (m.erase a).buckets.toListModel = m.buckets.toListModel.filter (·.1 != a) :=
   eraseP_toListModel m H a ▸ toListModel_erase m H a
 
+/-! ## Size -/
+
+theorem size_eq (m : Imp α β) (H : m.WF) : m.size = m.buckets.toListModel.length := by
+  rw [H.out.left, Buckets.toListModel_length]
+
+/-! ## Folds -/
+
+def fold_eq (m : Imp α β) (f : δ → α → β → δ) (init : δ) :
+    m.fold f init = m.buckets.toListModel.foldl (fun acc p => f acc p.1 p.2) init := by
+  simp_rw [fold, Buckets.toListModel, Array.foldl_eq_foldl_data, AssocList.foldl_eq]
+  induction' m.buckets.1.data with bkt bkts ih generalizing init
+  . rfl
+  . simp [foldl_cons, foldl_append, ih, foldl_append_fn]
+
+def foldRecOn [LawfulBEq α] {C : δ → Sort _} (m : Imp α β) (H : m.buckets.WF)
+    (f : δ → α → β → δ) (init : δ) (hInit : C init)
+    (hf : ∀ d a b, C d → m.find? a = some b → C (f d a b)) : C (m.fold f init) := by
+  rw [fold_eq]
+  apply List.foldlRecOn
+  . assumption
+  . intro d hD p hP
+    apply hf _ _ _ hD
+    rw [m.find?_eq H]
+    simp only [Option.map_eq_some', Prod.exists, exists_eq_right]
+    use p.1
+    apply (m.buckets.toListModel.find?_eq_some_of_unique _).mpr
+    . exact ⟨hP, LawfulBEq.rfl⟩
+    . apply m.buckets.Pairwise_bne_toListModel' H
+
 /-! ## Useful high-level theorems -/
 
 theorem findEntry?_insert {a a' b} {m : Imp α β} (H : m.WF) :
@@ -381,6 +427,22 @@ theorem findEntry?_erase {a a'} {m : Imp α β} (H : m.WF) :
     simp only [Bool.bnot_eq_to_not_eq, Bool.not_eq_true, Bool.bne_eq_false]
     exact PartialEquivBEq.trans h (PartialEquivBEq.symm hEq)
 
+theorem contains_iff [LawfulBEq α] (a) (m : Imp α β) (H : m.WF) :
+    m.contains a ↔ ∃ a' b, a == a' ∧ (a, b) ∈ m.buckets.toListModel := by
+  let idx := mkIdx (hash a) m.buckets.property
+  suffices m.contains a ↔ ∃ a' b, a == a' ∧ (a, b) ∈ (m.buckets.val[idx.1.toNat]'idx.2).toList by
+    simp_rw [this, m.buckets.mem_toListModel_iff_mem_bucket (WF_iff.mp H |>.right)]
+  simp_rw [contains, AssocList.contains_eq]
+  apply Iff.intro
+  . intro h
+    have ⟨p, hP, hPA⟩ := any_eq_true.mp h
+    use p.1, p.2
+    simp_all [← LawfulBEq.eq_of_beq hPA]
+  . intro ⟨_, b, _, hAB⟩
+    rw [any_eq_true]
+    use (a, b)
+    simp [hAB]
+
 end Imp
 
 theorem toList_eq_reverse_toListModel (m : HashMap α β) :
@@ -398,16 +460,32 @@ theorem toList_eq_reverse_toListModel (m : HashMap α β) :
     intro l₂
     simp only [List.foldl, ← List.reverse_append, ih]
 
+/-! `toList` -/
+
+@[simp]
+theorem toList_empty : (HashMap.empty : HashMap α β).toList = [] := by
+  simp [toList_eq_reverse_toListModel, empty, mkHashMap, Imp.empty, Imp.empty']
+
 /-! `empty` -/
 
-theorem isEmpty_empty : (HashMap.empty : HashMap α β).isEmpty :=
-  sorry
+theorem isEmpty_empty : (HashMap.empty : HashMap α β).isEmpty := by
+  simp [empty, mkHashMap, Imp.empty, Imp.empty', isEmpty, size]
+
+@[simp]
+theorem contains_empty [LawfulBEq α] (a : α) : (@empty α β _ _).contains a = false := by
+  cases h : contains empty a
+  . rfl
+  . rw [contains, empty, mkHashMap, Imp.contains_iff _ _ Imp.WF.empty] at h
+    simp at h
 
 /-! `findEntry?` -/
 
 @[simp]
-theorem findEntry?_of_isEmpty (m : HashMap α β) (a : α) : m.isEmpty → m.findEntry? a = none :=
-  sorry
+theorem findEntry?_of_isEmpty (m : HashMap α β) (a : α) : m.isEmpty → m.findEntry? a = none := by
+  rw [isEmpty, size, m.1.size_eq m.2, findEntry?, m.1.findEntry?_eq (Imp.WF_iff.mp m.2).right]
+  intro h
+  simp only [List.length_eq_zero, decide_eq_true_eq] at h
+  simp [h]
 
 @[simp]
 theorem findEntry?_empty (a : α) : (HashMap.empty : HashMap α β).findEntry? a = none :=
@@ -424,7 +502,7 @@ theorem findEntry?_insert_of_ne {a a'} (m : HashMap α β) (b) :
 theorem findEntry?_erase {a a'} (m : HashMap α β) : a == a' → (m.erase a).findEntry? a' = none :=
   m.val.findEntry?_erase m.property
 
-theorem ext_findEntry? (m₁ m₂ : HashMap α β) : (∀ a, m₁.findEntry? a = m₂.findEntry? a) → m₁ = m₂ :=
+theorem ext_findEntry? [LawfulBEq α] (m₁ m₂ : HashMap α β) : (∀ a, m₁.findEntry? a = m₂.findEntry? a) → m₁ = m₂ :=
   sorry
 
 /-! `find?` -/
@@ -432,8 +510,9 @@ theorem ext_findEntry? (m₁ m₂ : HashMap α β) : (∀ a, m₁.findEntry? a =
 theorem find?_eq (m : HashMap α β) (a : α) : m.find? a = (m.findEntry? a).map (·.2) :=
   AssocList.find?_eq_findEntry? _ _
 
-theorem find?_of_isEmpty (m : HashMap α β) (a : α) : m.isEmpty → m.find? a = none :=
-  sorry
+@[simp]
+theorem find?_of_isEmpty (m : HashMap α β) (a : α) : m.isEmpty → m.find? a = none := by
+  simp (config := {contextual := true}) [find?_eq]
 
 @[simp]
 theorem find?_empty (a : α) : (HashMap.empty : HashMap α β).find? a = none :=
@@ -457,28 +536,28 @@ theorem insert_comm [LawfulBEq α] (m : HashMap α β) (a₁ a₂ : α) (b : β)
   intro a
   cases Bool.beq_or_bne a₁ a <;> cases Bool.beq_or_bne a₂ a <;>
     simp_all [findEntry?_insert, findEntry?_insert_of_ne]
-    
+
 /-! `contains` -/
 
-theorem contains_iff (m : HashMap α β) (a : α) :
-    m.contains a ↔ ∃ b, m.find? a = some b :=
+theorem contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
+    m.contains a ↔ ∃ b, m.find? a = some b := by
   sorry
 
-theorem not_contains_iff (m : HashMap α β) (a : α) :
+theorem not_contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
     m.contains a = false ↔ m.find? a = none := by
   have := contains_iff m a
   apply Iff.intro
   . intro h; cases h' : find? m a <;> simp_all
   . intro h; simp_all
-  
-theorem not_contains_of_isEmpty (m : HashMap α β) (a : α) : m.isEmpty → m.contains a = false :=
+
+theorem not_contains_of_isEmpty [LawfulBEq α] (m : HashMap α β) (a : α) : m.isEmpty → m.contains a = false :=
   fun h => not_contains_iff _ _ |>.mpr (find?_of_isEmpty m a h)
 
 @[simp]
-theorem not_contains_empty (β) (a : α) : (empty : HashMap α β).contains a = false :=
+theorem not_contains_empty [LawfulBEq α] (β) (a : α) : (empty : HashMap α β).contains a = false :=
   not_contains_of_isEmpty _ a isEmpty_empty
 
-theorem contains_insert (m : HashMap α β) (a a' : α) (b : β) :
+theorem contains_insert [LawfulBEq α] (m : HashMap α β) (a a' : α) (b : β) :
     (m.insert a b).contains a' ↔ (m.contains a' ∨ a == a') := by
   simp only [contains_iff]
   refine ⟨?mp, fun h => h.elim ?mpr₁ ?mpr₂⟩
@@ -503,8 +582,13 @@ theorem contains_insert (m : HashMap α β) (a a' : α) (b : β) :
     intro hEq
     rw [find?_insert _ _ hEq]
     exact ⟨_, rfl⟩
-  
+
 /-! `fold` -/
+
+def foldRecOn [LawfulBEq α] {C : δ → Sort _} (m : HashMap α β) (f : δ → α → β → δ)
+    (init : δ) (hInit : C init)
+    (hf : ∀ d a b, C d → m.find? a = some b → C (f d a b)) : C (m.fold f init) :=
+  m.1.foldRecOn (Imp.WF_iff.mp m.2).right f init hInit hf
 
 /-- If an entry appears in the map, it will appear "last" in a commutative `fold` over the map. -/
 theorem fold_of_mapsTo_of_comm [LawfulBEq α] (m : HashMap α β) (f : δ → α → β → δ) (init : δ) :
@@ -512,13 +596,16 @@ theorem fold_of_mapsTo_of_comm [LawfulBEq α] (m : HashMap α β) (f : δ → α
     -- NOTE: This could be strengthened by assuming m.find? a₁ = some b₁
     -- and ditto for a₂, b₂ in the ∀ hypothesis
     (∀ d a₁ b₁ a₂ b₂, f (f d a₁ b₁) a₂ b₂ = f (f d a₂ b₂) a₁ b₁) →
-    -- TODO: Might also have to assume assoc
-    ∃ d, m.fold f init = f d a b :=
-  sorry
-  
-/-- Analogous to `List.foldlRecOn`. -/
-def foldRecOn {C : δ → Sort _} (m : HashMap α β) (f : δ → α → β → δ) (init : δ) (hInit : C init)
-    (hf : ∀ d a b, C d → m.find? a = some b → C (f d a b)) : C (m.fold f init) :=
-  sorry
+    ∃ d, m.fold f init = f d a b := by
+  intro hFind hComm
+  rw [fold, m.1.fold_eq]
+  apply List.foldl_of_comm (f := fun d p => f d p.1 p.2) (x := (a, b))
+  . simp [hComm]
+  . rw [find?, m.1.find?_eq (Imp.WF_iff.mp m.2).right] at hFind
+    simp only [Option.map_eq_some', Prod.exists, exists_eq_right] at hFind
+    have ⟨a', hA'⟩ := hFind
+    have := List.find?_mem hA'
+    have := List.find?_some hA'
+    simp_all
 
 end HashMap

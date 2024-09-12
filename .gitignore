@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.dSYM
 
 # Precompiled Headers
 *.gch
@@ -34,3 +35,7 @@
 # Lean packages
 lake-packages/
 build/
+.lake/
+
+# MacOS
+.DS_Store
