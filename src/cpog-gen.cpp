@@ -218,7 +218,7 @@ static int run(FILE *cnf_file, FILE *nnf_file, Pog_writer *pwriter) {
     Pog pog(&cnf);
     if (verblevel >= 2)
 	pwriter->enable_comments();
-    cnf.enable_pog(pwriter);
+    int conflict_id = cnf.enable_pog(pwriter);
     if (!pog.read_d4ddnnf(nnf_file)) {
 	err(false, "Error reading D4 NNF file\n");
 	return 1;
@@ -234,7 +234,12 @@ static int run(FILE *cnf_file, FILE *nnf_file, Pog_writer *pwriter) {
     int unit_cid = 0;
     if (one_sided)
 	unit_cid = cnf.assert_literal(root_literal);
-    else if (monolithic)
+    else if (conflict_id != 0) {
+	unit_cid = cnf.justify_conflict(root_literal, conflict_id);
+    } else if (root_literal > 0 && pog.is_node_type(root_literal, POG_TRUE)) {
+	unit_cid = pog.get_node(root_literal)->get_defining_cid();
+	report(3, "Tautology.  Clause #%d\n", unit_cid);
+    } else if (root_literal < 0 || monolithic)
 	unit_cid = cnf.monolithic_validate_root(root_literal);
     else
 	unit_cid = pog.justify(root_literal, false, use_lemmas);
@@ -254,9 +259,7 @@ static int run(FILE *cnf_file, FILE *nnf_file, Pog_writer *pwriter) {
     for (int cid = 1; !overcount && cid <= cnf.clause_count(); cid++) {
 	bool deleted = pog.delete_input_clause(cid, unit_cid, overcount_literals);
 	if (!deleted) {
-	    report(1, "OVERCOUNT.  Generating partial assignment that contradicts clause %d\n", cid);
-	    print_solution(overcount_literals);
-	    report(1, "Skipping remaining deletions\n", cid);
+	    report(1, "OVERCOUNT.  Can't justify\n");
 	    overcount = true;
 	}
     }

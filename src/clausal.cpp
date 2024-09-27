@@ -432,6 +432,7 @@ Cnf::Cnf(FILE *infile) {
 	return;
     }
     if (!no_header) {
+	max_input_var = expectedMax;
 	incr_count_by(COUNT_CLAUSE, clause_count());
 	incr_count_by(COUNT_VAR, max_input_var);
     }
@@ -1121,7 +1122,7 @@ int Cnf_reasoner::new_xvar() {
 }
 
 // Enable POG generation
-bool Cnf_reasoner::enable_pog(Pog_writer *pw) {
+int Cnf_reasoner::enable_pog(Pog_writer *pw) {
     pwriter = pw;
     // Set up active clauses
     curr_active_clauses = new std::set<int>;
@@ -1142,11 +1143,9 @@ bool Cnf_reasoner::enable_pog(Pog_writer *pw) {
 	    activate_clause(cid);
     }
     int ncid = bcp(false);
-    if (ncid > 0) {
-	pwriter->comment("Read failed.  Formula unsatisfiable (justifying ID = %d)", ncid);
-	return false;
-    };
-    return true;
+    if (ncid > 0)
+	pwriter->comment("Formula unsatisfiable (justifying ID = %d)", ncid);
+    return ncid;
 }
 
 // Perform Boolean constraint propagation
@@ -2192,12 +2191,16 @@ int Cnf_reasoner::monolithic_validate_root(int root_literal) {
 	err(true, "Couldn't open temporary file '%s'\n", cnf_name);
     }
     int starting_proof_size = proof_clauses.size();
-    int full_clause_count = clause_count() + starting_proof_size;
+    bool is_false = root_literal < 0;
+    int full_clause_count = is_false ? clause_count() : clause_count() + starting_proof_size;
     // Write Input clauses + initial BCP clauses + defining clauses as CNF
     fprintf(cnf_out, "p cnf %d %d\n", xvar_count, full_clause_count);
     for (int cid = 1; cid <= full_clause_count; cid++) {
 	Clause *clp = get_clause(cid);
-	clp->show_reduced(cnf_out, -root_literal);
+	if (is_false)
+	    clp->show(cnf_out);
+	else
+	    clp->show_reduced(cnf_out, -root_literal);
     }
     fclose(cnf_out);
     
@@ -2214,11 +2217,16 @@ int Cnf_reasoner::monolithic_validate_root(int root_literal) {
 	err(false, "Couldn't open generated LRAT file\n", lrat_name);
 	return 0;
     }
-    if (!monolithic_load_proof(lfile, root_literal)) {
+    if (!monolithic_load_proof(lfile, is_false ? 0 : root_literal)) {
 	err(false, "Failed to read generated LRAT file\n", lrat_name);
 	return 0;
     }
     fclose(lfile);
+    if (is_false) {
+	int conflict_id = clause_count() + proof_clauses.size();
+	justify_conflict(root_literal, conflict_id);
+    }
+	
     Clause *lnp = proof_clauses.back();
     if (lnp->length() != 1) {
 	err(false, "Execution of command '%s' did not generate unit clause\n", cmd);	
@@ -2237,10 +2245,13 @@ int Cnf_reasoner::monolithic_validate_root(int root_literal) {
 }
  
 bool Cnf_reasoner::monolithic_load_proof(FILE *lfile, int root_literal) {
-    pwriter->comment("Monolithic proof of root literal %d", root_literal);
-    int nclause = clause_count() + proof_clauses.size();
+    if (root_literal == 0)
+	pwriter->comment("Unsat proof");
+    else
+	pwriter->comment("Monolithic proof of root literal %d", root_literal);
+    int nclause = root_literal == 0 ? clause_count() : clause_count() + proof_clauses.size();
     std::unordered_map<int,int> lrat2local;
-    int next_id = nclause + 1;
+    int next_id = root_literal == 0 ? nclause + 2 : nclause + 1;
     while (find_token(lfile)) {
 	int sid = 0;
 	if (fscanf(lfile, "%d", &sid) != 1) {
@@ -2273,7 +2284,8 @@ bool Cnf_reasoner::monolithic_load_proof(FILE *lfile, int root_literal) {
 	    return false;
 	}
 	// Add root literal
-	np->add(root_literal);
+	if (root_literal != 0)
+	    np->add(root_literal);
 	Clause *hp = new Clause(lfile, true, &eof);
 	if (hp == NULL || eof) {
 	    err(false, "Error encountered while trying to read hints from proof step #%d\n", sid);
@@ -2294,4 +2306,15 @@ bool Cnf_reasoner::monolithic_load_proof(FILE *lfile, int root_literal) {
 	next_id++;
     }
     return true;
+}
+
+int Cnf_reasoner::justify_conflict(int rlit, int conflict_id) {
+    if (conflict_id == 0)
+        err(false, "Failed to find empty clause to justify FALSE\n");
+    pwriter->comment("Justify FALSE from empty clause");
+    Clause *clp = new Clause(&rlit, 1);
+    int jid = start_assertion(clp);
+    add_hint(conflict_id);
+    finish_command(true);
+    return jid;
 }

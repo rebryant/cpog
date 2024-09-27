@@ -351,8 +351,8 @@ public:
     Clause * get_clause(int cid);
     Clause * operator[](int);
 
-    // POG generation.  Returns false if BCP shows formula is UNSAT
-    bool enable_pog(Pog_writer *cw);
+    // POG generation.  Returns empty clause ID if BCP shows formula is UNSAT
+    int enable_pog(Pog_writer *cw);
 
     // Reset next xvar counter
     void reset_xvar();
@@ -440,6 +440,8 @@ public:
 
     // Monolithic validation: generate proof that input formula --> root literal
     int monolithic_validate_root(int root_literal);
+    // Justify FALSE root given conflict clause ID
+    int justify_conflict(int root_literal, int conflict_id);
 
 
 private:

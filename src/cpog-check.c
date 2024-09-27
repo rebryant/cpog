@@ -1289,9 +1289,10 @@ void cpog_add_product(int cid) {
 	ilist_free(save);
     }
     ilist_free(local_dependency_list);
+#if 0
     if (ilist_length(node->children) < 2) 
 	err_printf(__cfunc__, "Sum node %d has %d childen.  Must have >= 2\n", nid, ilist_length(node->children));
-
+#endif
     /* Done */
     token = token_next();
     if (token != TOK_EOL) 
@@ -1420,6 +1421,10 @@ int cpog_final_root() {
 	if (node == NULL || node->type == NODE_NONE)
 	    continue;
 	int n = ilist_length(node->children);
+        if (n == 0 && node->type == NODE_PRODUCT) {
+            root = nid;
+            continue;
+        }
 	for (i = 0; i <= n; i++)
 	    clause_delete(node->cid + i);
     }
@@ -1432,7 +1437,7 @@ int cpog_final_root() {
 		if (clause_is_unit(lits)) {
 		    if (root == 0)
 			root = *lits;
-		    else 
+		    else if (root != *lits)
 			err_printf(__cfunc__, "Found at least two root literals: %d and %d\n", root, *lits);
 		} else 
 		    err_printf(__cfunc__, "Found undeleted, non-unit clause #%d\n", cid);

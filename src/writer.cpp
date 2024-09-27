@@ -266,7 +266,7 @@ void Pog_writer::start_or(int cid, int var) {
 }
 
 void Pog_writer::clause_deletion(std::vector<int> *dvp) {
-    write_text("dc ");
+    write_text("d ");
     write_vector(*dvp);
     finish_line("");
 }
