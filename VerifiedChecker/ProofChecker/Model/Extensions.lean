@@ -4,15 +4,15 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Nawrocki
 -/
 
-import ProofChecker.Model.PropVars
+import LeanSAT.Model.PropVars
 
 /-! Reasoning about definitional extensions. -/
 
-namespace PropTerm
+open LeanSAT Model PropFun
 
 variable [DecidableEq ν]
 
-theorem equivalentOver_def_ext {x : ν} {X : Set ν} (φ ψ : PropTerm ν) :
+theorem equivalentOver_def_ext {x : ν} {X : Set ν} (φ ψ : PropFun ν) :
     ↑φ.semVars ⊆ X → ↑ψ.semVars ⊆ X → x ∉ X → equivalentOver X φ (φ ⊓ .biImpl (.var x) ψ) := by
   intro hφ hψ hMem τ
   constructor
@@ -29,7 +29,7 @@ theorem equivalentOver_def_ext {x : ν} {X : Set ν} (φ ψ : PropTerm ν) :
     intro ⟨σ₂, hAgree, h₂⟩
     exact ⟨σ₂, hAgree, (satisfies_conj.mp h₂).left⟩
 
-theorem equivalentOver_def_self {x : ν} {X : Set ν} (φ : PropTerm ν) :
+theorem equivalentOver_def_self {x : ν} {X : Set ν} (φ : PropFun ν) :
     x ∉ X → ↑φ.semVars ⊆ X → equivalentOver X (.var x ⊓ .biImpl (.var x) φ) φ := by
   intro hMem hφ τ
   constructor
@@ -43,9 +43,10 @@ theorem equivalentOver_def_self {x : ν} {X : Set ν} (φ : PropTerm ν) :
     have hAgree₁₂ : σ₁.agreeOn X σ₂ := σ₂.agreeOn_set_of_not_mem _ hMem
     have : σ₁.agreeOn X τ := hAgree₁₂.trans hAgree
     have : σ₁ ⊨ φ := agreeOn_semVars (hAgree₁₂.subset hφ) |>.mpr h₂
-    exact ⟨σ₁, by assumption, satisfies_conj.mpr (by simp (config := {zeta := false}) [this])⟩
-    
-theorem hasUniqueExtension_def_ext {X : Set ν} (x : ν) (φ ψ : PropTerm ν) :
+    refine ⟨σ₁, by assumption, satisfies_conj.mpr ?_⟩
+    aesop
+
+theorem hasUniqueExtension_def_ext {X : Set ν} (x : ν) (φ ψ : PropFun ν) :
     ↑ψ.semVars ⊆ X → hasUniqueExtension X (insert x X) (φ ⊓ .biImpl (.var x) ψ) := by
   intro hψ σ₁ σ₂ h₁ h₂ hAgree
   suffices σ₁ ⊨ .var x ↔ σ₂ ⊨ .var x by
@@ -58,19 +59,17 @@ theorem hasUniqueExtension_def_ext {X : Set ν} (x : ν) (φ ψ : PropTerm ν) :
   have := agreeOn_semVars (hAgree.subset hψ)
   constructor <;> simp_all
 
-theorem disj_def_eq (x : ν) (φ₁ φ₂ : PropTerm ν) :
+theorem disj_def_eq (x : ν) (φ₁ φ₂ : PropFun ν) :
     ((.var x)ᶜ ⊔ (φ₁ ⊔ φ₂)) ⊓ ((.var x ⊔ φ₁ᶜ) ⊓ (.var x ⊔ φ₂ᶜ)) = .biImpl (.var x) (φ₁ ⊔ φ₂) := by
   ext τ
   cases h : τ x <;> simp [not_or, h]
 
-theorem equivalentOver_disj_def_ext {x : ν} {X : Set ν} (φ φ₁ φ₂ : PropTerm ν) :
+theorem equivalentOver_disj_def_ext {x : ν} {X : Set ν} (φ φ₁ φ₂ : PropFun ν) :
     ↑φ.semVars ⊆ X → ↑φ₁.semVars ⊆ X → ↑φ₂.semVars ⊆ X → x ∉ X →
     equivalentOver X φ (φ ⊓ ((.var x)ᶜ ⊔ φ₁ ⊔ φ₂) ⊓ (.var x ⊔ φ₁ᶜ) ⊓ (.var x ⊔ φ₂ᶜ)) := by
   intro hφ h₁ h₂ hMem
   simp [sup_assoc, inf_assoc, disj_def_eq]
   have := Finset.coe_subset.mpr (semVars_disj φ₁ φ₂)
   apply equivalentOver_def_ext _ _ hφ (subset_trans this (by simp [*])) hMem
-  
--- TODO: bigConj_def_eq
 
-end PropTerm
+-- TODO: bigConj_def_eq

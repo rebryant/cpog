@@ -4,7 +4,8 @@ Released under Apache 2.0 license as described in the file LICENSE.
 Authors: Wojciech Nawrocki
 -/
 
-import ProofChecker.Data.ICnf
+import LeanSAT.Data.ICnf
+
 import ProofChecker.Checker.CheckerCore
 
 def Except.ofOption (e : ε) : Option α → Except ε α
@@ -52,6 +53,7 @@ def tokenizeLines (lines : Array String) : Array (Array Token) := Id.run do
 end Dimacs
 
 open Dimacs
+open LeanSAT
 
 def Nat.ofToken : Token → Except String Nat
   | .int i =>
@@ -65,29 +67,29 @@ def Var.ofToken : Token → Except String Var
     else .error s!"expected positive int at '{i}'"
   | .str s => .error s!"expected int at '{s}'"
 
-def ILit.ofToken : Token → Except String ILit
+def LeanSAT.ILit.ofToken : Token → Except String ILit
   | .int i =>
     if h : i ≠ 0 then .ok ⟨i, h⟩
     else .error s!"literal can't be zero at '{i}'"
   | .str s => .error s!"expected int at '{s}'"
 
-def ILit.ofTokenBounded (bd : Nat) (tk : Token) : Except String ILit := do
+def LeanSAT.ILit.ofTokenBounded (bd : Nat) (tk : Token) : Except String ILit := do
   let l ← ILit.ofToken tk
   if l.var ≤ bd then
     return l
   else
     throw s!"literal {l} exceeds maximum variable index {bd}"
 
-def IClause.ofTokens (tks : Array Token) : Except String IClause := do
+def LeanSAT.IClause.ofTokens (tks : Array Token) : Except String IClause := do
   tks.mapM ILit.ofToken
 
-def IClause.ofTokensBounded (bd : Nat) (tks : Array Token) : Except String IClause := do
+def LeanSAT.IClause.ofTokensBounded (bd : Nat) (tks : Array Token) : Except String IClause := do
   tks.mapM (ILit.ofTokenBounded bd)
 
 /-- Return a CNF computed from the tokens of a DIMACS CNF file, together with the variable count
 stored in the header. -/
-def ICnf.ofLines (lns : Array (Array Token)) : Except String (ICnf × Nat) := do
-  let some hdr := lns[0]? 
+def LeanSAT.ICnf.ofLines (lns : Array (Array Token)) : Except String (ICnf × Nat) := do
+  let some hdr := lns[0]?
     | throw s!"expected at least one line"
   let #[.str "p", .str "cnf", nVars, .int nClauses] := hdr
     | throw s!"unexpected header {hdr}"
@@ -106,21 +108,21 @@ def ICnf.ofLines (lns : Array (Array Token)) : Except String (ICnf × Nat) := do
     throw s!"expected {nClauses} clauses, but got {clauses.size}"
   return (clauses, nVars)
 
-def ICnf.readDimacsFile (fname : String) : IO (ICnf × Nat) := do
+def LeanSAT.ICnf.readDimacsFile (fname : String) : IO (ICnf × Nat) := do
   let lns ← IO.FS.lines fname
   let lns := Dimacs.tokenizeLines lns
   match ofLines lns with
   | .ok v => return v
   | .error e => throw <| IO.userError e
-  
-def ICnf.toDimacs (cnf : ICnf) (nVars : Nat) : String := Id.run do
+
+def LeanSAT.ICnf.toDimacs (cnf : ICnf) (nVars : Nat) : String := Id.run do
   let mut s := s!"p cnf {nVars} {cnf.size}\n"
   for C in cnf do
     for l in C do
       s := s ++ toString l ++ " "
     s := s ++ "0\n"
   return s
-  
+
 /-- Return a proof step given a DIMACS line. -/
 def CpogStep.ofTokens (tks : Array Token) : Except String CpogStep := do
   let toUpHints (tks : Array Token) : Except String (Array Nat) := do
@@ -139,7 +141,7 @@ def CpogStep.ofTokens (tks : Array Token) : Except String CpogStep := do
       | throw s!"missing terminating 0 in hints"
     let hints : Subarray Token := tks[C.size+1:tks.size-1]
     return .addAt (← Nat.ofToken idx) (← IClause.ofTokens C) (← toUpHints hints)
-  | .str "dc", idx =>
+  | .str "d", idx =>
     let some (.int 0) := tks[tks.size-1]?
       | throw s!"missing terminating 0 in hints"
     let hints : Subarray Token := tks[:tks.size-1]

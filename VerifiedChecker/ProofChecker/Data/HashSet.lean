@@ -52,7 +52,7 @@ theorem toFinset_sub (s : HashSet α) (a : α) : a ∈ s.toFinset → s.contains
   intro _ a _ ih hFind hMem
   cases hMem with
   | inl h =>
-    apply HashMap.contains_iff _ _ |>.mpr 
+    apply HashMap.contains_iff _ _ |>.mpr
     exact h ▸ ⟨_, hFind⟩
   | inr h => exact ih h
 
@@ -77,7 +77,7 @@ theorem not_mem_toFinset (s : HashSet α) (a : α) : a ∉ s.toFinset ↔ ¬s.co
 @[simp]
 theorem toFinset_empty : toFinset (empty α) = ∅ := by
   ext
-  simp [mem_toFinset, empty, contains, HashMap.not_contains_empty]
+  simp [mem_toFinset, empty, contains, HashMap.contains_empty]
 
 theorem toFinset_of_isEmpty (s : HashSet α) : s.isEmpty → s.toFinset = ∅ := by
   intro h

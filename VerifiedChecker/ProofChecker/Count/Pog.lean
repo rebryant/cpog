@@ -7,8 +7,8 @@ Authors: Jeremy Avigad
 import ProofChecker.Data.Pog
 import ProofChecker.Count.PropForm
 
-open Nat
 open PogElt
+open LeanSAT Model
 
 namespace Pog
 
@@ -38,7 +38,7 @@ where
   | 0, A, h => ⟨A, h.symm⟩
   | n + 1, A, h =>
     have ASizeLt : A.size < pog.elts.size := by
-      rw [h, ←add_assoc]; exact lt_succ_of_le (le_add_right _ _)
+      rw [h, ←add_assoc]; exact Nat.lt_succ_of_le (Nat.le_add_right _ _)
     let nextElt : Nat :=
       match pog.elts[A.size]'ASizeLt, pog.wf ⟨A.size, ASizeLt⟩, pog.inv ⟨A.size, ASizeLt⟩ with
         | var x, _, _ => 2^(nVars - 1)
@@ -76,24 +76,24 @@ theorem countModels_foldr_conj (nVars : Nat) (φs : List (PropForm Var)) :
 theorem toCountArray_spec (pog : Pog) (nVars : Nat) :
   ∀ i : Fin (pog.toCountArray nVars).1.size,
       (pog.toCountArray nVars).1[i] =
-        PropForm.countModels nVars (pog.toPropForm (.mkPos (succPNat i))) := by
+        PropForm.countModels nVars (pog.toPropForm (.mkPos (Nat.succPNat i))) := by
   apply aux
   rintro ⟨i, h⟩; contradiction
 where
   aux : (n : Nat) → (A : Array Nat) → (h : pog.elts.size = A.size + n) →
           (h' : (∀ i : Fin A.size, A[i] =
-            PropForm.countModels nVars (pog.toPropForm (.mkPos (succPNat i))))) →
+            PropForm.countModels nVars (pog.toPropForm (.mkPos (Nat.succPNat i))))) →
     ∀ i : Fin (toCountArray.aux pog nVars n A h).1.size,
       (toCountArray.aux pog nVars n A h).1[i] =
-        PropForm.countModels nVars (pog.toPropForm (.mkPos (succPNat i)))
+        PropForm.countModels nVars (pog.toPropForm (.mkPos (Nat.succPNat i)))
   | 0,     _, _, h' => h'
   | n + 1, A, h, h' => by
     have ASizeLt : A.size < pog.elts.size := by
-      rw [h, ←add_assoc]; exact lt_succ_of_le (le_add_right _ _)
+      rw [h, ←add_assoc]; exact Nat.lt_succ_of_le (Nat.le_add_right _ _)
     apply aux n; dsimp
     intro ⟨i, i_lt⟩
     rw [Array.size_push] at i_lt
-    cases lt_or_eq_of_le (le_of_lt_succ i_lt)
+    cases lt_or_eq_of_le (Nat.le_of_lt_succ i_lt)
     next ilt =>
       rw [Array.get_push_lt _ _ i ilt]
       exact h' ⟨i, ilt⟩
@@ -102,11 +102,11 @@ where
       split
       . next x _ hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         rw [toPropForm_aux_eq, heq, PropForm.countModels]
       . next x left right hleft hright hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         have hleft : PNat.natPred (ILit.var left) < A.size := by
           dsimp at hinv; rwa [hinv, PNat.natPred_lt_natPred]
         have hright : PNat.natPred (ILit.var right) < A.size := by
@@ -138,16 +138,15 @@ where
               PropForm.countModels]
       . next x args hwf hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         rw [toPropForm_aux_eq, heq]; dsimp
-        rw [conjProd_eq_conjProd', conjProd', PropForm.arrayConj, PropForm.listConj,
+        rw [conjProd_eq_conjProd', conjProd', arrayConj, listConj,
           countModels_foldr_conj]
         apply congr_arg
         rw [←Array.toList_eq, ←List.ofFn, List.map_ofFn]
         apply congr_arg
         ext j
         simp only [Function.comp_apply]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
         have harg : PNat.natPred (ILit.var args[j]) < A.size := by
           dsimp at hinv; rw [hinv, PNat.natPred_lt_natPred]
           exact hwf j
@@ -163,13 +162,13 @@ where
 
 theorem count_eq_countModels (pog : Pog) (nVars : Nat) (x : Var) :
     pog.count nVars x = (pog.toPropForm (.mkPos x)).countModels nVars := by
-  rw [count, toPropForm, ILit.var_mkPos]
+  rw [count, toPropForm, LitVar.toVar_mkPos]
   split
   . next h =>
     have h' := h; rw [←(pog.toCountArray nVars).2] at h'
     have := pog.toCountArray_spec nVars ⟨_, h'⟩
     dsimp at this; rw [PNat.succPNat_natPred] at this
-    dsimp; rw [this, toPropForm, ILit.var_mkPos, dif_pos h]
+    dsimp; rw [this, toPropForm, LitVar.toVar_mkPos, dif_pos h]
   . next h => rfl
 
 theorem count_eq' (pog : Pog) (nVars : Nat) (x : Var) (φ : PropForm Var) :
@@ -202,7 +201,7 @@ where
   | 0, A, h => ⟨A, h.symm⟩
   | n + 1, A, h =>
     have ASizeLt : A.size < pog.elts.size := by
-      rw [h, ←add_assoc]; exact lt_succ_of_le (le_add_right _ _)
+      rw [h, ←add_assoc]; exact Nat.lt_succ_of_le (Nat.le_add_right _ _)
     let nextElt : R :=
       match pog.elts[A.size]'ASizeLt, pog.wf ⟨A.size, ASizeLt⟩, pog.inv ⟨A.size, ASizeLt⟩ with
         | var x, _, _ => weight x
@@ -240,24 +239,24 @@ theorem ringEval_foldr_conj (weight : Var → R) (φs : List (PropForm Var)) :
 theorem toRingEvalArray_spec (pog : Pog) (weight : Var → R) :
   ∀ i : Fin (pog.toRingEvalArray weight).1.size,
       (pog.toRingEvalArray weight).1[i] =
-        PropForm.ringEval weight (pog.toPropForm (.mkPos (succPNat i))) := by
+        PropForm.ringEval weight (pog.toPropForm (.mkPos (Nat.succPNat i))) := by
   apply aux
   rintro ⟨i, h⟩; contradiction
 where
   aux : (n : Nat) → (A : Array R) → (h : pog.elts.size = A.size + n) →
           (h' : (∀ i : Fin A.size, A[i] =
-            PropForm.ringEval weight (pog.toPropForm (.mkPos (succPNat i))))) →
+            PropForm.ringEval weight (pog.toPropForm (.mkPos (Nat.succPNat i))))) →
     ∀ i : Fin (Pog.toRingEvalArray.aux pog weight n A h).1.size,
       (Pog.toRingEvalArray.aux pog weight n A h).1[i] =
-        PropForm.ringEval weight (pog.toPropForm (.mkPos (succPNat i)))
+        PropForm.ringEval weight (pog.toPropForm (.mkPos (Nat.succPNat i)))
   | 0,     _, _, h' => h'
   | n + 1, A, h, h' => by
     have ASizeLt : A.size < pog.elts.size := by
-      rw [h, ←add_assoc]; exact lt_succ_of_le (le_add_right _ _)
+      rw [h, ←add_assoc]; exact Nat.lt_succ_of_le (Nat.le_add_right _ _)
     apply aux n; dsimp
     intro ⟨i, i_lt⟩
     rw [Array.size_push] at i_lt
-    cases lt_or_eq_of_le (le_of_lt_succ i_lt)
+    cases lt_or_eq_of_le (Nat.le_of_lt_succ i_lt)
     next ilt =>
       rw [Array.get_push_lt _ _ i ilt]
       exact h' ⟨i, ilt⟩
@@ -266,11 +265,11 @@ where
       split
       . next x _ hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         rw [toPropForm_aux_eq, heq, PropForm.ringEval]
       . next x left right hleft hright hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         have hleft : PNat.natPred (ILit.var left) < A.size := by
           dsimp at hinv; rwa [hinv, PNat.natPred_lt_natPred]
         have hright : PNat.natPred (ILit.var right) < A.size := by
@@ -302,16 +301,15 @@ where
               PropForm.ringEval]
       . next x args hwf hinv heq _ _ =>
         rw [toPropForm]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
+        simp only [LitVar.toVar_mkPos, Nat.natPred_succPNat, withPolarity_mkPos, dif_pos ASizeLt]
         rw [toPropForm_aux_eq, heq]; dsimp
-        rw [conjProdW_eq_conjProdW', conjProdW', PropForm.arrayConj, PropForm.listConj,
+        rw [conjProdW_eq_conjProdW', conjProdW', arrayConj, listConj,
           ringEval_foldr_conj]
         apply congr_arg
         rw [←Array.toList_eq, ←List.ofFn, List.map_ofFn]
         apply congr_arg
         apply funext; intro j
         simp only [Function.comp_apply]
-        simp only [ILit.var_mkPos, natPred_succPNat, PropForm.withPolarity_mkPos, dif_pos ASizeLt]
         have harg : PNat.natPred (ILit.var args[j]) < A.size := by
           dsimp at hinv; rw [hinv, PNat.natPred_lt_natPred]
           exact hwf j
@@ -327,13 +325,13 @@ where
 
 theorem ringEval_eq_ringEval (pog : Pog) (weight : Var → R) (x : Var) :
     pog.ringEval weight x = (pog.toPropForm (.mkPos x)).ringEval weight := by
-  rw [ringEval, toPropForm, ILit.var_mkPos]
+  rw [ringEval, toPropForm, LitVar.toVar_mkPos]
   split
   . next h =>
     have h' := h; rw [←(pog.toRingEvalArray weight).2] at h'
     have := pog.toRingEvalArray_spec weight ⟨_, h'⟩
     dsimp at this; rw [PNat.succPNat_natPred] at this
-    dsimp; rw [this, toPropForm, ILit.var_mkPos, dif_pos h]
+    dsimp; rw [this, toPropForm, LitVar.toVar_mkPos, dif_pos h]
   . next h => rfl
 
 theorem ringEval_eq' (pog : Pog) (weight : Var → R) (x : Var) (φ : PropForm Var) :

@@ -60,7 +60,7 @@ checkHome = "../src"
 checkProgram = checkHome + "/cpog-check"
 
 leanHome =  "../VerifiedChecker"
-leanCheckProgram = leanHome + "/build/bin/checker"
+leanCheckProgram = leanHome + "/.lake/build/bin/checker"
 
 timeLimits = { "D4" : 4000, "GEN" : 10000, "FCHECK" : 1000, "LCHECK" : 4000 }
 
