@@ -118,8 +118,6 @@ public:
 
     // Does literal refer to an input variable or a node
     bool is_node(int lit);
-    // Does literal refer to a node of specified type                                                                           
-    bool is_node_type(int lit, pog_type_t type);
 
     // Index POG nodes by their extension variables
     Pog_node * get_node(int var);

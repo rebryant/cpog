@@ -201,14 +201,6 @@ Pog_node * Pog::get_node(int id) {
     return nodes[id-max_input_var-1];
 }
 
-bool Pog::is_node_type(int lit, pog_type_t type) {
-    if (!is_node(lit))
-        return false;
-    int id = IABS(lit);
-    Pog_node *np = get_node(id);
-    return np->get_type() == type;
-}
-
 Pog_node * Pog::operator[](int id) {
     return nodes[id-max_input_var-1];
 }
@@ -396,7 +388,7 @@ bool Pog::optimize() {
     if (nrvar == true_id) {
 	Pog_node *nnp = new Pog_node(POG_TRUE);
 	add_node(nnp);
-	root_literal = MATCH_PHASE(max_input_var+1, root_literal);
+	root_literal = MATCH_PHASE(1, root_literal);
     } else if (IABS(nrvar) > max_input_var) {
 	// Normal case.  Copy new nodes.  Set their indegrees
 	for (Pog_node *np : new_nodes) {
@@ -888,7 +880,7 @@ int Pog::justify(int rlit, bool parent_or, bool use_lemma) {
 	    }
 	    break;
 	default:
-	    err(true, "justify: Unknown POG type %d\n", (int) rnp->get_type());
+	    err(true, "Unknown POG type %d\n", (int) rnp->get_type());
 	}
 	jcid = cnf->start_assertion(jclause);
 	for (int hint : hints)
@@ -1011,7 +1003,7 @@ bool Pog::get_deletion_counterexample(int cid, std::vector<bool> &implies_clause
 	    }
 	    break;
 	default:
-	    err(true, "get_deletion_counterexample: Unknown POG type %d for node N%d\n", (int) np->get_type(), np->get_xvar());
+	    err(true, "Unknown POG type %d for node N%d\n", (int) np->get_type(), np->get_xvar());
 	}
     }
     // Now convert to list of literals
@@ -1047,7 +1039,6 @@ bool Pog::delete_input_clause(int cid, int unit_cid, std::vector<int> &overcount
 	Pog_node *np = nodes[nidx];
 	bool implies = false;
 	switch (np->get_type()) {
-	case POG_TRUE:
 	case POG_AND:
 	    implies = false;
 	    // Must have at least one child implying the clause
@@ -1086,7 +1077,7 @@ bool Pog::delete_input_clause(int cid, int unit_cid, std::vector<int> &overcount
 		dvp->push_back(np->get_defining_cid());
 	    break;
 	default:
-	    err(true, "delete_input_clause: Unknown POG type %d for node N%d\n", (int) np->get_type(), np->get_xvar());
+	    err(true, "Unknown POG type %d for node N%d\n", (int) np->get_type(), np->get_xvar());
 	}
 	implies_clause[nidx] = implies;	    
     }
