@@ -796,8 +796,6 @@ bool clause_delete(int cid) {
 }
 
 void start_clause(int cid) {
-    if (clause_last_id == 0)
-	clause_init();
     if (clause_locate(cid) != NULL)
 	err_printf(__cfunc__, "Can't add clause %d.  Clause Id already defined\n", cid);
     if (cid < clause_last_id)
@@ -1023,6 +1021,7 @@ void rup_skip(int tcid) {
 
 void cnf_read(char *fname) {
     token_setup(fname);
+    clause_init();
     /* Find and parse header */
     while (true) {
 	token_t token = token_next();
