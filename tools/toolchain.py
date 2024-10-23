@@ -31,8 +31,9 @@ import datetime
 import time
 
 def usage(name):
-    print("Usage: %s [-h] [-v VERB] [-1] [-m] [-L] [-G] [-F] FILE.EXT ..." % name)
+    print("Usage: %s [-h] [-k] [-v VERB] [-1] [-m] [-L] [-G] [-F] FILE.EXT ..." % name)
     print("  -h       Print this message")
+    print("  -k       Keep intermediate files")
     print("  -v VERB  Set verbosity level.  Level 2 causes comments in .cpog file")
     print("  -1       Generate one-sided proof (don't validate assertions)")
     print("  -m       Monolithic mode: Do validation with single call to SAT solver")
@@ -49,6 +50,7 @@ monolithic = False
 useLemma = True
 group = True
 useLean = False
+keepFiles = False
 
 # Pathnames
 d4Program = "d4"
@@ -137,7 +139,7 @@ def runD4(root, home, logFile, force):
         return True
     cmd = [d4Program, cnfName, "-dDNNF", "-out=" + nnfName]
     ok = runProgram("D4", root, cmd, logFile)
-    if not ok and os.path.exists(nnfName):
+    if not keepFiles and not ok and os.path.exists(nnfName):
         os.remove(nnfName)
     return ok
 
@@ -147,7 +149,7 @@ def runPartialGen(root, home, logFile, force):
     cpogName = home + "/" + root + ".cpog"
     cmd = [genProgram, "-p", cnfName, nnfName, cpogName]
     ok = runProgram("GEN", root, cmd, logFile)
-    if not ok and os.path.exists(cpogName):
+    if not keepFiles and not ok and os.path.exists(cpogName):
         os.remove(cpogName)
     return ok
 
@@ -173,7 +175,7 @@ def runGen(root, home, logFile, force):
     cmd += ["-C", str(clauseLimit), "-L", extraLogName, cnfName, nnfName, cpogName]
     ok = runProgram("GEN", root, cmd, logFile, extraLogName = extraLogName)
     checkFile("GEN", cpogName, logFile)
-    if not ok and os.path.exists(cpogName):
+    if not keepFiles and not ok and os.path.exists(cpogName):
         os.remove(cpogName)
     return ok
 
@@ -253,14 +255,16 @@ def runBatch(home, fileList, force):
         runSequence(r, home, force)
 
 def run(name, args):
-    global verbLevel, useLemma, group, oneSided, monolithic, useLean
+    global verbLevel, useLemma, group, oneSided, monolithic, useLean, keepFiles
     home = "."
     force = True
-    optList, args = getopt.getopt(args, "hv:1mLGFs:")
+    optList, args = getopt.getopt(args, "hkv:1mLGFs:")
     for (opt, val) in optList:
         if opt == '-h':
             usage(name)
             return
+        elif opt == '-k':
+            keepFiles = True
         elif opt == '-v':
             verbLevel = int(val)
         elif opt == '-1':
