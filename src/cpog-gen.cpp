@@ -234,7 +234,10 @@ static int run(FILE *cnf_file, FILE *nnf_file, Pog_writer *pwriter) {
     int unit_cid = 0;
     if (one_sided)
 	unit_cid = cnf.assert_literal(root_literal);
-    else if (monolithic)
+    else if (pog.is_node_type(root_literal, POG_TRUE)) {
+	report(2, "Tautology\n");
+	unit_cid = pog.get_node(IABS(root_literal))->get_defining_cid();
+    } else if (monolithic)
 	unit_cid = cnf.monolithic_validate_root(root_literal);
     else
 	unit_cid = pog.justify(root_literal, false, use_lemmas);

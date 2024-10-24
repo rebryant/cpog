@@ -432,6 +432,7 @@ Cnf::Cnf(FILE *infile) {
 	return;
     }
     if (!no_header) {
+	max_input_var = expectedMax;
 	incr_count_by(COUNT_CLAUSE, clause_count());
 	incr_count_by(COUNT_VAR, max_input_var);
     }

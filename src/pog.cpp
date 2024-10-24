@@ -197,6 +197,15 @@ bool Pog::is_node(int lit) {
     return var > max_input_var && var <= max_input_var + nodes.size();
 }
 
+bool Pog::is_node_type(int lit, pog_type_t type) {
+    if (!is_node(lit))
+	return false;
+    int id = IABS(lit);
+    Pog_node *np = get_node(id);
+    return np->get_type() == type;
+}
+
+
 Pog_node * Pog::get_node(int id) {
     return nodes[id-max_input_var-1];
 }
@@ -388,7 +397,7 @@ bool Pog::optimize() {
     if (nrvar == true_id) {
 	Pog_node *nnp = new Pog_node(POG_TRUE);
 	add_node(nnp);
-	root_literal = MATCH_PHASE(1, root_literal);
+	root_literal = MATCH_PHASE(max_input_var+1, root_literal);
     } else if (IABS(nrvar) > max_input_var) {
 	// Normal case.  Copy new nodes.  Set their indegrees
 	for (Pog_node *np : new_nodes) {
@@ -780,6 +789,7 @@ int Pog::justify(int rlit, bool parent_or, bool use_lemma) {
 	    }
 	    break;
 	case POG_AND:
+	case POG_TRUE:
 	    {
 		incr_count(COUNT_VISIT_AND);
 		int cnext = 0;
