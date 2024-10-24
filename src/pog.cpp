@@ -248,7 +248,7 @@ bool Pog::optimize() {
 
     int defining_clause_count = 0;
 
-    // If root represents input variable, then nothing need be done
+    // When root represents input literal, convert to product node with single child
     if (!is_node(root_literal)) {
 	for (Pog_node *np : nodes)
 	    delete np;
@@ -363,9 +363,8 @@ bool Pog::optimize() {
 	    if (zeroed)
 		continue;
 	    else if (nchildren.size() == 0) {
-		err(true, "Translation of And node #%d has no children\n", oid);
-		//		remap[oid-max_input_var-1] = -true_id;
-	    } else if (nchildren.size() == 1)
+		remap[oid-max_input_var-1] = true_id;
+	    } else if (nchildren.size() == 1) 
 		remap[oid-max_input_var-1] = nchildren[0];
 	    else {
 		Pog_node *nnp = new Pog_node(POG_AND);
@@ -415,7 +414,18 @@ bool Pog::optimize() {
 		}
 	    }
 	}
+    } else {
+	// When root represents input literal, convert to product node with single child
+	nodes.resize(0);
+	Pog_node *np = new Pog_node(POG_AND);
+	np->set_xvar(max_input_var+1);
+	std::vector<int> children;
+	children.push_back(root_literal);
+	np->add_children(&children);
+	nodes.push_back(np);
+	root_literal = max_input_var+1;
     }
+
     report(1, "Compressed POG has %d nodes, root literal %d, and %d defining clauses\n", nodes.size(), root_literal, defining_clause_count);
 
     // Set parameters for progress reporting
