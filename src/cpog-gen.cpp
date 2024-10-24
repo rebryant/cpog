@@ -220,7 +220,7 @@ static int run(FILE *cnf_file, FILE *nnf_file, Pog_writer *pwriter) {
 	pwriter->enable_comments();
     cnf.enable_pog(pwriter);
     if (!pog.read_d4ddnnf(nnf_file)) {
-	err(false, "Error reading D4 NNF file\n");
+	err(false, "Error reading D4 NNF file.  Aborting proof generation\n");
 	return 1;
     }
     elapsed = get_elapsed();

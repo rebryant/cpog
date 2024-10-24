@@ -395,9 +395,14 @@ bool Pog::optimize() {
     root_literal = MATCH_PHASE(remap[rvar-max_input_var-1], root_literal);
     int nrvar = IABS(root_literal);
     if (nrvar == true_id) {
-	Pog_node *nnp = new Pog_node(POG_TRUE);
-	add_node(nnp);
-	root_literal = MATCH_PHASE(max_input_var+1, root_literal);
+	if (root_literal < 0) {
+	    report(0, "Compiled formula unsatisfiable.  Cannot verify\n");
+	    return false;
+	} else {
+	    Pog_node *nnp = new Pog_node(POG_TRUE);
+	    add_node(nnp);
+	    root_literal = MATCH_PHASE(max_input_var+1, root_literal);
+	}
     } else if (IABS(nrvar) > max_input_var) {
 	// Normal case.  Copy new nodes.  Set their indegrees
 	for (Pog_node *np : new_nodes) {
