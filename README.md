@@ -41,9 +41,9 @@ In addition, running the toolchain using formally verified tools requires the fo
 * **linstall:**
     Compiles the Lean verifier
 * **ptest:**
-    Runs the prototype tools on two simple test problems
+    Runs the prototype tools on five simple test problems
 * **ltest:**
-    Runs the verified tools on two simple test problems
+    Runs the verified tools on five simple test problems
 * **run:**
     Runs the generator, prototype checker, and prototype counter on 30 benchmark files
 * **lrun:**
