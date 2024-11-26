@@ -118,11 +118,11 @@ theorem sub_toFinset_union_left (s t : HashSet α) : s.toFinset ⊆ (s.union t).
 theorem sub_toFinset_union (s t : HashSet α) : s.toFinset ∪ t.toFinset ⊆ (s.union t).toFinset := by
   apply Finset.union_subset (sub_toFinset_union_left s t)
   dsimp [union]
-  intro _ h
-  have ⟨_, hFind⟩ := HashMap.contains_iff _ _|>.mp (mem_toFinset _ _ |>.mp h)
-  have ⟨_, h⟩ := HashMap.fold_of_mapsTo_of_comm t (init := s) (fun acc a _ => acc.insert a)
-    hFind (by intros; apply HashMap.insert_comm)
-  simp [h]
+  intro a h
+  rw [mem_toFinset, contains, HashMap.contains_iff] at h
+  have ⟨_, ta⟩ := h
+  apply t.foldEventuallyInduction (C := fun acc => a ∈ acc.toFinset) (init := s) ta <;>
+    aesop
 
 @[simp]
 theorem toFinset_union (s t : HashSet α) : (s.union t).toFinset = s.toFinset ∪ t.toFinset :=
@@ -145,21 +145,11 @@ theorem sub_toFinset_inter (s t : HashSet α) : s.toFinset ∩ t.toFinset ⊆ (s
   intro x
   simp only [inter, Finset.mem_inter]
   intro ⟨hS, hT⟩
-  have ⟨_, hFind⟩ := HashMap.contains_iff _ _|>.mp (mem_toFinset _ _ |>.mp hT)
-  have ⟨_, h⟩ := HashMap.fold_of_mapsTo_of_comm t (init := empty α)
-    (fun acc a _ => if s.contains a then acc.insert a else acc)
-    hFind ?comm
-  case comm =>
-    intros
-    dsimp [insert]
-    split_ifs <;>
-      aesop (add norm HashMap.insert_comm)
-  rw [h]
-  split
-  . simp
-  . have : x ∉ s.toFinset :=
-      not_mem_toFinset _ _ |>.mpr (by assumption)
-    contradiction
+  rw [mem_toFinset] at hS
+  rw [mem_toFinset, contains, HashMap.contains_iff] at hT
+  have ⟨_, tx⟩ := hT
+  apply t.foldEventuallyInduction (C := fun acc => x ∈ acc.toFinset) (init := empty α) tx <;>
+    aesop
 
 @[simp]
 theorem toFinset_inter (s t : HashSet α) : (s.inter t).toFinset = s.toFinset ∩ t.toFinset :=

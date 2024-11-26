@@ -78,6 +78,54 @@ theorem List.map_mapDep {γ : Type u} : (l : List α) → (f : (a : α) → a �
 
 namespace List
 
+def eventuallyRec {motive : List α → Sort _} {l : List α} {i : Fin l.length} {x : α}
+    (xl : l.get i = x)
+    (base : ∀ tail, motive (x :: tail))
+    (cons : ∀ head tail, motive tail → motive (head :: tail)) :
+    motive l :=
+  match l with
+  | nil => nomatch i.is_lt
+  | a :: as =>
+    let ⟨i, i_lt⟩ := i
+    if h : i = 0 then
+      have : x = a := by
+        cases h
+        simpa using xl.symm
+      this ▸ base _ -- `dcast motive` would be better
+    else
+      have : i - 1 < as.length :=
+        Nat.sub_lt_right_of_lt_add (Nat.one_le_iff_ne_zero.mpr h) (by simpa using i_lt)
+      have : as.get ⟨i - 1, this⟩ = x := by
+        rw [show (⟨i, i_lt⟩ : Fin (a :: as).length) = ⟨(i - 1) + 1, Nat.succ_lt_succ this⟩ by
+          ext; exact (Nat.succ_pred h).symm] at xl
+        simpa using xl
+      cons _ _ (eventuallyRec this base cons)
+
+theorem eventuallyInduction {motive : List α → Prop} {x : α} {l : List α}
+    (xl : x ∈ l)
+    (base : ∀ tail, motive (x :: tail))
+    (cons : ∀ head tail, motive tail → motive (head :: tail)) :
+    motive l :=
+  have ⟨_, li⟩ := List.get_of_mem xl
+  eventuallyRec li base cons
+
+theorem foldlEventuallyInduction {β : Sort _} {motive : β → Prop} {x : α} {l : List α}
+    (xl : x ∈ l)
+    (op : β → α → β) (b : β)
+    (base : ∀ b, motive (op b x))
+    (cons : ∀ b a, motive b → motive (op b a)) :
+    motive (l.foldl op b) := by
+  rw [← foldr_reverse]
+  have xl : x ∈ l.reverse := by simp [xl]
+  generalize l.reverse = k at xl
+  induction k generalizing b with
+  | nil => cases xl
+  | cons a as ih =>
+    rw [foldr]
+    cases mem_cons.mp xl with
+    | inl h => cases h; apply base
+    | inr h => exact cons _ _ (ih _ h)
+
 /-! drop -/
 
 theorem drop_eq_cons_get (l : List α) (i : Nat) (h : i < l.length)
