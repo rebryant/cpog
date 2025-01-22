@@ -543,7 +543,19 @@ theorem find?_erase {a a'} (m : HashMap α β) : a == a' → (m.erase a).find? a
 
 theorem contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
     m.contains a ↔ ∃ b, m.find? a = some b := by
-  sorry
+  have wf := (Imp.WF_iff.mp m.property).right
+  rw [contains, find?, m.val.contains_iff _ m.property, m.val.find?_eq wf]
+  simp only [beq_iff_eq, exists_and_left, exists_and_right, exists_eq', true_and,
+    Option.map_eq_some', Prod.exists, exists_eq_right]
+  constructor
+  . intro ⟨b, bmem⟩
+    use b, a
+    refine (List.find?_eq_some_of_unique ?_).mpr ⟨bmem, ?_⟩
+    . exact Imp.Buckets.Pairwise_bne_toListModel' m.val.buckets wf a
+    . simp
+  . intro ⟨b, a, findeq⟩
+    have := List.find?_some findeq
+    exact ⟨b, (beq_iff_eq ..).mp this ▸ List.find?_mem findeq⟩
 
 theorem not_contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
     m.contains a = false ↔ m.find? a = none := by
