@@ -388,6 +388,20 @@ def foldRecOn [LawfulBEq α] {C : δ → Sort _} (m : Imp α β) (H : m.buckets.
     . exact ⟨hP, LawfulBEq.rfl⟩
     . apply m.buckets.Pairwise_bne_toListModel' H
 
+theorem foldEventuallyInduction [LawfulBEq α] {C : δ → Prop} {m : Imp α β} {a : α} {b : β}
+    (H : m.buckets.WF)
+    (mab : m.find? a = some b)
+    (hBase : ∀ d, C (f d a b))
+    (hf : ∀ d a b, C d → C (f d a b)) :
+    C (m.fold f init) := by
+  rw [fold_eq]
+  have : (a, b) ∈ m.buckets.toListModel := by
+    simp only [find?_eq _ H, Option.map_eq_some', Prod.exists, exists_eq_right] at mab
+    have ⟨a', ha'⟩ := mab
+    convert List.find?_mem ha'
+    simpa [eq_comm (a := a)] using List.find?_some ha'
+  apply List.foldlEventuallyInduction this _ _ hBase (fun d ⟨a, b⟩ => hf d a b)
+
 /-! ## Useful high-level theorems -/
 
 theorem findEntry?_insert {a a' b} {m : Imp α β} (H : m.WF) :
@@ -502,9 +516,6 @@ theorem findEntry?_insert_of_ne {a a'} (m : HashMap α β) (b) :
 theorem findEntry?_erase {a a'} (m : HashMap α β) : a == a' → (m.erase a).findEntry? a' = none :=
   m.val.findEntry?_erase m.property
 
-theorem ext_findEntry? [LawfulBEq α] (m₁ m₂ : HashMap α β) : (∀ a, m₁.findEntry? a = m₂.findEntry? a) → m₁ = m₂ :=
-  sorry
-
 /-! `find?` -/
 
 theorem find?_eq (m : HashMap α β) (a : α) : m.find? a = (m.findEntry? a).map (·.2) :=
@@ -528,20 +539,23 @@ theorem find?_insert_of_ne {a a'} (m : HashMap α β) (b) :
 theorem find?_erase {a a'} (m : HashMap α β) : a == a' → (m.erase a).find? a' = none :=
   fun h => by simp [find?_eq, findEntry?_erase m h]
 
-/-! `insert` -/
-
-theorem insert_comm [LawfulBEq α] (m : HashMap α β) (a₁ a₂ : α) (b : β) :
-    (m.insert a₁ b).insert a₂ b = (m.insert a₂ b).insert a₁ b := by
-  apply ext_findEntry?
-  intro a
-  cases Bool.beq_or_bne a₁ a <;> cases Bool.beq_or_bne a₂ a <;>
-    simp_all [findEntry?_insert, findEntry?_insert_of_ne]
-
 /-! `contains` -/
 
 theorem contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
     m.contains a ↔ ∃ b, m.find? a = some b := by
-  sorry
+  have wf := (Imp.WF_iff.mp m.property).right
+  rw [contains, find?, m.val.contains_iff _ m.property, m.val.find?_eq wf]
+  simp only [beq_iff_eq, exists_and_left, exists_and_right, exists_eq', true_and,
+    Option.map_eq_some', Prod.exists, exists_eq_right]
+  constructor
+  . intro ⟨b, bmem⟩
+    use b, a
+    refine (List.find?_eq_some_of_unique ?_).mpr ⟨bmem, ?_⟩
+    . exact Imp.Buckets.Pairwise_bne_toListModel' m.val.buckets wf a
+    . simp
+  . intro ⟨b, a, findeq⟩
+    have := List.find?_some findeq
+    exact ⟨b, (beq_iff_eq ..).mp this ▸ List.find?_mem findeq⟩
 
 theorem not_contains_iff [LawfulBEq α] (m : HashMap α β) (a : α) :
     m.contains a = false ↔ m.find? a = none := by
@@ -589,6 +603,13 @@ def foldRecOn [LawfulBEq α] {C : δ → Sort _} (m : HashMap α β) (f : δ →
     (init : δ) (hInit : C init)
     (hf : ∀ d a b, C d → m.find? a = some b → C (f d a b)) : C (m.fold f init) :=
   m.1.foldRecOn (Imp.WF_iff.mp m.2).right f init hInit hf
+
+theorem foldEventuallyInduction [LawfulBEq α] {C : δ → Prop} {m : HashMap α β} {a : α} {b : β}
+    (mab : m.find? a = some b)
+    (hBase : ∀ d, C (f d a b))
+    (hf : ∀ d a b, C d → C (f d a b)) :
+    C (m.fold f init) :=
+  m.1.foldEventuallyInduction (Imp.WF_iff.mp m.2).right mab hBase hf
 
 /-- If an entry appears in the map, it will appear "last" in a commutative `fold` over the map. -/
 theorem fold_of_mapsTo_of_comm [LawfulBEq α] (m : HashMap α β) (f : δ → α → β → δ) (init : δ) :
