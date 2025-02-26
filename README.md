@@ -12,9 +12,11 @@ Running the toolchain using prototype (unverified) tools requires the following:
 
 * A C and C++ compiler
 * A python3 interpreter
-* An installed version of the [D4 knowledge compiler](https://github.com/crillab/d4)
-* An installed version of the [CaDiCal SAT solver](https://github.com/arminbiere/cadical)
-* An installed version of the [Drat-trim proof checker](https://github.com/marijnheule/drat-trim)
+* External programs:
+  - An installed version of the [D4 knowledge compiler](https://github.com/crillab/d4)
+  - An installed version of the [CaDiCal SAT solver](https://github.com/arminbiere/cadical)
+  - An installed version of the [Drat-trim proof checker](https://github.com/marijnheule/drat-trim)
+  - It should be possible to invoke these programs at the shell level with the commands "d4", "cadical", and "drat-trim"
 
 In addition, running the toolchain using formally verified tools requires the following:
 

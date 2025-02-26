@@ -2,8 +2,8 @@ CC=gcc
 CXX=g++
 OPT=-O2
 #OPT=-O0
-CFLAGS=-g $(OPT) -Wno-nullability-completeness
-CPPFLAGS=-g $(OPT) -Wno-nullability-completeness -std=c++11
+CFLAGS=-g $(OPT) 
+CPPFLAGS=-g $(OPT) -std=c++11
 
 install: all
 

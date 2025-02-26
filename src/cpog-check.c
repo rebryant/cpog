@@ -689,6 +689,7 @@ int *clause_locate_within(int bid, int cid) {
     int pos = cid - clause_blocks[bid].start_id;
     int chunk = clause_blocks[bid].chunk[pos];
     int offset = clause_blocks[bid].offset[pos];
+    printf("Looking for clause %d.  Got block %d, offset %d, chunk %d\n", cid, bid, offset, chunk);
     if (offset < 0)
 	return NULL;
     return chunk_set[chunk] + offset;
@@ -696,13 +697,14 @@ int *clause_locate_within(int bid, int cid) {
 
 /* Return pointer to beginning of any existing clause */
 int *clause_locate(int cid) {
-    int bid;
+    int bid = -1;
     /* Ensure that lid <= bid <= rid */
     int lid = 0;
     int rid = clause_block_count - 1;
     while (lid <= rid) {
 	bid = (lid + rid)/2;
 	int sense = clause_probe_block(bid, cid);
+	printf("Looking for clause %d.  lid = %d, rid = %d, bid = %d, sense = %d\n", cid, lid, rid, bid, sense);
 	if (sense < 0)
 	    rid = bid-1;
 	else if (sense > 0)
